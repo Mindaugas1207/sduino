@@ -1,0 +1,88 @@
+body {background-color: #202124;}
+
+.range-wrap {
+padding-top: 15px; padding-bottom: 40px;
+position: relative;
+margin: 0 auto;
+width: 90%;
+}
+
+.range {
+-webkit-appearance: none;
+width: 100%;
+outline: none;
+height: 10px;
+border-radius: 25px;
+opacity: 0.6;
+-webkit-transition: .2s;
+transition: opacity .2s;
+border: solid 1px teal;
+transition: background 450ms ease-in;
+}
+
+.bubble {
+min-width: 40px;
+border-radius: 10px;
+padding: 2px 5px;
+text-align: center;
+font-weight: bold;
+background: teal;
+color: white;
+position: absolute;
+margin-top: 5px;
+font-size: 70%;
+}
+
+.label {
+color: White;
+}
+
+.range:hover {
+ opacity: 1;
+}
+
+.range::-webkit-slider-thumb {
+-webkit-appearance: none;
+appearance: none;
+width: 20px;
+height: 20px;
+border-radius: 100%;
+background: Cyan;
+cursor: pointer;
+}
+
+.tab {
+width: 90%;
+overflow: hidden;
+border: 1px solid Teal;
+padding: 0px 6px;
+background-color: gray;
+}
+
+.tab button {
+background-color: inherit;
+float: center;
+border: none;
+outline: none;
+cursor: pointer;
+padding: 7px 60px;
+transition: 0.3s;
+font-size: 20px;
+}
+
+.tab button:hover {
+background-color: Cyan;
+}
+
+.tab button.active {
+background-color: Teal;
+}
+
+.tabcontent {
+width: 90%;
+display: none;
+padding: 6px 6px;
+border: 1px solid Teal;
+border-top: none;
+}
+

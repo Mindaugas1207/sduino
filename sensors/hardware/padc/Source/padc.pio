@@ -1,0 +1,44 @@
+
+.define public __PADC_FLAG_STRT 6
+.define public __PADC_DATA_BITS (12)
+.define public __PADC_CNV_COUNT (31)
+.define public __PADC_FLAG_IRQ 0
+
+.program padc_sm0
+.side_set 2
+
+.define public T_CNVH 7
+.define public T_CLKL 0
+.define public T_CLKH 0
+.define public FLAG_STRT __PADC_FLAG_STRT
+.define public DATA_BITS __PADC_DATA_BITS
+
+.wrap_target
+    irq wait FLAG_STRT   side 0x0
+    set x, (DATA_BITS-2) side 0x1 [T_CNVH]
+    wait 0 pin 0         side 0x0 ; clr cnv, wait bussy bit low
+    nop                  side 0x2
+    nop                  side 0x0
+    nop                  side 0x2
+data_read:
+    in pins, 1           side 0x0
+    jmp x-- data_read    side 0x2
+    in pins, 1           side 0x0
+.wrap
+
+.program padc_sm1
+.side_set 1
+
+.define public T_SAMPLING 5
+.define public FLAG_STRT __PADC_FLAG_STRT
+.define public CNV_COUNT __PADC_CNV_COUNT
+.define public FLAG_IRQ __PADC_FLAG_IRQ
+
+.wrap_target
+    irq wait 0           side 0x0
+    set x, (CNV_COUNT-1) side 0x1
+    nop                  side 0x0
+cnv_start:
+    wait 1 irq FLAG_STRT side 0x0
+    jmp x-- cnv_start    side 0x0
+.wrap

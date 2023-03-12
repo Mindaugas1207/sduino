@@ -1,0 +1,342 @@
+const float PID_SetPoint = 0.0f;
+
+// const double PID_OutputHighLimit = 20.0;
+// const double PID_OutputLowLimit = -20.0;
+
+// const double PID_Gain = 0.4;
+
+float PID_Integral = 0.0f;
+// const double PID_IntegralTime_us = 1.0; //5000000.0
+// const double PID_IntegralRateLimit = 0.0;
+// const double PID_IntegralAntiWindup = 0.0;
+
+float PID_Derivative = 0.0f;
+// const double PID_DerivativeTime_us = 0.0;
+// const double PID_DerivativeCutoff = 1.0;
+float PID_LastError = 0.0f;
+//double PID_LastOutput = 0.0;
+
+
+
+
+
+
+
+
+
+
+
+
+// bool target_det = false;
+
+// static void imu_hw_callback(uint gpio, uint32_t events)
+// {
+//     if (events == GPIO_IRQ_EDGE_RISE) {
+//         gpio_put(SDUINO_INTERNAL_LED_PIN, 1);
+//         target_det = true;
+//     }
+//     else {
+//         gpio_put(SDUINO_INTERNAL_LED_PIN, 1);
+//         target_det = false;
+//     }
+    
+    
+//     //VL53L0X_ClearInterruptMask(&vlx.device, 0);
+// }
+
+// void vlx_init(port_i2c_t *port_inst) {
+//     //port_device_select(&port_inst, PORT_CHANNEL_1);
+
+//     SENSORX_VL53L0X_Init(&vlx, port_inst, PORT_CHANNEL_1, VL53L0X_DEFAULT_ADDRESS, 0);
+//     SENSORX_VL53L0X_RunCalibrations(&vlx, VL53L0X_CALIBRATE_SPADS);
+//     SENSORX_VL53L0X_RunCalibrations(&vlx, VL53L0X_CALIBRATE_REF);
+//     SENSORX_VL53L0X_GetConfig(&vlx);
+//     //SENSORX_VL53L0X_PrintAll(&vlx);
+//     // vlx.config.INTERRUPT.MODE = VL53L0X_GPIOFUNCTIONALITY_THRESHOLD_CROSSED_LOW;
+//     // vlx.config.INTERRUPT.POLARITY = VL53L0X_INTERRUPTPOLARITY_HIGH;
+//     // vlx.config.INTERRUPT.THRESHOLD_HIGH = 0;
+//     // vlx.config.INTERRUPT.THRESHOLD_LOW = 200;
+//     vlx.config.RANGING_MODE = VL53L0X_DEVICEMODE_CONTINUOUS_RANGING;
+//     //VL53L0X_SetDeviceMode(&vlx.device, VL53L0X_DEVICEMODE_CONTINUOUS_RANGING);
+//     SENSORX_VL53L0X_SetConfig(&vlx);
+//     //gpio_set_irq_enabled_with_callback(SDUINO_INTERNAL_IMU_INT_PIN, GPIO_IRQ_EDGE_RISE, true, &imu_hw_callback);
+//     if (SENSORX_VL53L0X_StartMeasurement(&vlx) == SENSORX_ERROR)
+//         printf("sensor start: error!\n");
+// }
+// bool obj_detected = false;
+// VL53L0X_RangingMeasurementData_t vlx_data;
+// void vlx_read_multi() {
+//     if (SENSORX_VL53L0X_PollMeasurementDataReady(&vlx) == 1) {
+//         SENSORX_VL53L0X_GetMeasurementData(&vlx, &vlx_data);
+//         obj_detected = vlx_data.RangeMilliMeter < 150 ? true : false;
+//         printf("%s\n", obj_detected ? "true" : "false");
+//     }
+// }
+
+// #define ramp 1
+// #define swing 2
+// #define brick 3
+// bool object_found = 0;
+// int objects[] = {0,brick,ramp,swing};//
+// int current_object_number = 0;
+// int current_object = 0;
+
+
+// char colors[NUM_SENSORS + 1] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+// int func_2( uint32_t value ) {
+//   char current_color = '\0';
+//   int n = 0;
+//   for (int i = 0; i < NUM_SENSORS; i++) {
+//     if (value & (1 << i)) {
+//       if (current_color != 'B') {
+//         colors[n] = 'B';
+//         n++;
+//         current_color = 'B';
+//       }
+//     }
+//     else {
+//       if (current_color != 'W') {
+//         colors[n] = 'W';
+//         n++;
+//         current_color = 'W';
+//       }
+//     }
+//   }
+//   return n;
+// }
+
+//bool ofset = false;
+//bool marker_found = false;
+//char ofset_dir = 'R';
+//float speed_SLOW = 1.0f;
+
+
+
+
+
+
+
+
+
+
+
+int main() {
+    
+    sduino_init();
+    
+    
+    
+    //vlx_init(&i2c_port);
+    if (Motors.init(SDUINO_INTERNAL_DRV_A_IN2_PIN,
+                    SDUINO_INTERNAL_DRV_A_IN1_PIN,
+                    SDUINO_INTERNAL_DRV_B_IN1_PIN,
+                    SDUINO_INTERNAL_DRV_B_IN2_PIN) == MOTOR_DRIVER_ERROR) 
+        printf("MOTOR_DRIVER_INIT:ERROR\n");
+
+    //ESC.init(ESC_PIN);
+
+    LineSensorHW.port_inst = &i2c_port;
+    if (LineSensor.init(&LineSensorHW) == LINE_SENSOR_ERROR) {
+        printf("LINE_SENSOR_INIT:ERROR\n");
+        while (true) { tight_loop_contents(); }
+    }
+    //IMU.init(&i2c_port, &spi_port);
+
+    LineSensor.setEmitterPower(0.7f);
+    LineSensor.setEmitterEnable(true);
+    LineSensor.setLedEnable(true);
+
+    loadCalibration();
+
+    LineSensor.startAsyncProcess();
+    //IMU.startAsyncProcess();
+    // sizeof (VL53L0X_Config_t);
+    
+    //vlx_test_meas();
+
+    //vlx_test();
+
+    //absolute_time_t t0 = get_absolute_time();
+    
+    // absolute_time_t sensor_t0 = get_absolute_time();
+    // absolute_time_t sensor_t1 = get_absolute_time();
+    // absolute_time_t marker_t0 = get_absolute_time();
+    // absolute_time_t marker_t1 = get_absolute_time();
+    //bool can_slow = false;
+    //absolute_time_t LastTime = get_absolute_time();
+    //absolute_time_t print_time = get_absolute_time();
+    while (true)
+    {
+                //gpio_put(SDUINO_INTERNAL_LED_PIN, 1);
+                
+        //vlx_read_multi();
+            
+        if (LineSensor.runAsyncProcess())
+        { //new values
+            auto [value, detected] = LineSensor.getPosition();
+            
+            // uint32_t lineShape = LineSensor.getLineCode();
+            // if (mESTART && !mESTOP)
+            // {
+            //     if (object_found == false && obj_detected) 
+            //     {
+            //         if (current_object_number < 4) 
+            //         {
+            //             object_found = true;
+            //             current_object_number++;
+            //             current_object = objects[current_object_number];
+            //             sensor_t0 = get_absolute_time();
+            //             sensor_t1 = get_absolute_time();
+            //         }
+            //         if (current_object == 0) {
+            //             object_found = false;
+            //         }
+            //     }
+            //     else if (!obj_detected && ((to_ms_since_boot(get_absolute_time()) - to_ms_since_boot(sensor_t1)) > 500))
+            //     {
+            //         object_found = false;
+            //     }
+            //     if (object_found == true) {
+            //         if (current_object == brick) {
+            //             //printf("brick\n");
+            //             Motors.setSpeed(0.0f, 0.0f);
+            //             sleep_ms(1000);
+            //             Motors.setSpeed(0.2f, -0.2f);
+            //             sleep_ms(210);
+            //             Motors.setSpeed(0.2f, 0.2f);
+            //             sleep_ms(400);
+            //             Motors.setSpeed(-0.2f, 0.2f);
+            //             sleep_ms(200);
+            //             Motors.setSpeed(0.2f, 0.2f);
+            //             sleep_ms(400);
+            //             Motors.setSpeed(-0.2f, 0.2f);
+            //             sleep_ms(70);
+            //             Motors.setSpeed(0.25f, 0.25f);
+            //             sleep_ms(80);
+            //             Motors.setSpeed(0.0f, 0.0f);
+            //             sleep_ms(1000);
+            //             LineSensor.setOuts(0.0f);
+            //             current_object = 0;
+            //             object_found = false;
+            //         }
+            //         else if (current_object == ramp){
+            //             //printf("ramp\n");
+            //             if ((to_ms_since_boot(get_absolute_time()) - to_ms_since_boot(sensor_t0)) > 500) {
+            //                 current_object = 0;
+            //             }
+            //             else {
+            //                 Motors.setSpeed(0.6f, 0.6f);
+            //             }
+            //         }
+            //         else if (current_object == swing){
+            //             //printf("swing\n");
+            //             if ((to_ms_since_boot(get_absolute_time()) - to_ms_since_boot(sensor_t0)) > 2000) {
+            //                 current_object = 0;
+            //             }
+            //             else {
+            //                 runPid(0.0f);
+            //             }
+            //             marker_t1 = get_absolute_time();
+            //             can_slow = true;
+            //         }
+            //     }
+            //     if (current_object == 0) {
+            //         int n_colors = func_2(lineShape);
+  
+            //         int tmp = 0;
+            //         char rep = '\0';
+            //         char dir = 'R';
+            //         for (int i = 0; i < n_colors; i++) {
+            //             if (colors[i] == 'B') {
+            //                 if (tmp == 0)
+            //                     tmp = 1;
+            //                 else if (tmp == 2)
+            //                     tmp = 3;
+            //                 else if (tmp == 4)
+            //                     tmp = 5;
+            //                 if (rep == 'B')
+            //                     dir = 'L';
+            //                 else
+            //                     rep = 'B';
+            //             }
+            //             else if (colors[i] == 'W') {
+            //                 if (tmp == 1)
+            //                     tmp = 2;
+            //                 else if (tmp == 3)
+            //                     tmp = 4;
+            //                 if (rep == 'W')
+            //                     dir = 'L';
+            //                 else
+            //                     rep = 'W';
+            //             }
+            //         }
+                    
+            //         if (tmp == 3 || tmp == 4) {
+            //             if ( marker_found == false && ofset == false ) {
+            //                 marker_found = true;
+            //                 ofset_dir = value > 0.1 ? 'R' : 'L';
+            //             }
+            //         }
+            //         else {
+            //             if (tmp == 5 && can_slow && (to_ms_since_boot(get_absolute_time()) - to_ms_since_boot(marker_t1)) > 5000)
+            //             {
+            //                 speed_SLOW = 0.5f;
+            //             }
+            //             if ( marker_found == true && ofset == false ) {
+            //                 ofset = true;
+            //                 marker_found = false;
+            //                 marker_t0 = get_absolute_time();
+            //             }
+            //         }
+            //         if (ofset == true) {
+            //             if ((to_ms_since_boot(get_absolute_time()) - to_ms_since_boot(sensor_t0)) > 500) {
+            //                 ofset = false;
+            //             }
+            //             else if (ofset_dir == 'R') {
+            //                 value -= 0.6f;
+                            
+            //             }
+            //             else if (ofset_dir == 'L') {
+            //                 value += 0.6f;
+            //             }
+            //         }
+            //     runPid(value);
+            // }
+        //  }
+            if (mStart && !mStop)
+                followLine(value);
+            else
+                Motors.setSpeed(0.0f, 0.0f);
+        }
+        //if (IMU.runAsyncProcess())
+        //{ //new values
+            //auto [roll, pitch, yaw] = IMU.getOrientation();
+
+            // absolute_time_t current_time = get_absolute_time();
+            // if (to_us_since_boot(print_time) < to_us_since_boot(current_time)) {
+            //     print_time = delayed_by_ms(current_time, 50);
+            //     printf("Pitch:\t%f\t\tRoll:\t%f\t\tYaw:\t%f\n", pitch * 180.0f / M_PI, roll * 180.0f / M_PI, yaw * 180.0f / M_PI);
+            //     //printf("Value:\t%f\t\tDetected:\t%s\n", value, detected ? "true" : "false");
+            // }
+        //}
+
+        
+        // if (mESTART && !mESTOP)
+        //     ESC.setSpeed(nvm_data.vars[varESCval]);
+        // else
+        //     ESC.setSpeed(0.0f);
+        
+
+        
+        
+        // absolute_time_t t1 = get_absolute_time();
+        // int64_t dt_read = absolute_time_diff_us(t0, t1);
+        // t0 = t1;
+        //double v = pid_compute(LineSensor.readPosition(), dt_read);
+        serialProcess();
+        //gpio_put(SDUINO_INTERNAL_LED_PIN, 0);
+    }
+    return 0;
+}
+

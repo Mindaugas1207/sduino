@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset='UTF-8' name='viewport' content="width=device-width,initial-scale=1">
+	<title>SduinoAP</title>
+	<link rel="stylesheet" href="styles.css">
+	<script src="scripts.js" type="text/javascript"></script>
+</head>
+<body id="index" style="margin:0; padding:0;" onload="onBodyLoad()">
+<center>
+<div id="controls" style="border: 2px solid Teal; padding: 5px; margin: 5px; width: 90%;">
+	<p>
+		<button onclick="loadValues()" style="width: 100px; height: 40px;">Refresh</button>
+		<button onclick="testComms()" style="width: 100px; height: 40px;">TEST</button>
+	</p><p>
+		<button id = "var6:v" onclick="updateVar('var6', 1)" style="width: 100px; height: 40px;">LOAD</button>
+		<button id = "var7:v" onclick="updateVar('var7', 1)" style="width: 100px; height: 40px;">SAVE</button>
+		<button id = "var5:v" onclick="updateVar('var5', 1)" style="width: 100px; height: 40px;">ERASE</button>
+	</p><p>
+		<button id = "var1:v" onclick="updateVar('var1', 1)" style="width: 100px; height: 40px;">START</button>
+		<button id = "var2:v" onclick="updateVar('var2', 1)" style="width: 100px; height: 40px;">STOP</button>
+	</p><p>
+		<button id = "var4:v" onclick="updateVar('var4', 1)" style="width: 100px; height: 40px;">CALIBRATE IMU</button>
+	</p><p>
+		<button id = "var8:v" onclick="updateVar('var8', 1)" style="width: 100px; height: 40px;">SLEEP</button>
+		<button id = "var9:v" onclick="updateVar('var9', 1)" style="width: 100px; height: 40px;">WAKEUP</button>
+	</p>
+</div>
+<div class="tab">
+	<button class="tablinks" onclick="switchTab(event, 'COMMON')">COMMON</button>
+	<button class="tablinks" onclick="switchTab(event, 'MOTORS')">MOTORS</button>
+</div>
+<div id="COMMON" class="tabcontent">
+	<div class="range-wrap" id="var256">
+		<span class ="label">SPEED</span>
+		<input type="range" class="range" min="0.00" max="1.00" value="0.00" step="0.1">
+		<output class="bubble"></output>
+	</div>
+	<div class="range-wrap" id="var257">
+		<span class ="label">TURN+</span>
+		<input type="range" class="range" min="0.00" max="1.00" value="0.00" step="0.1">
+		<output class="bubble"></output>
+	</div>
+	<div class="range-wrap" id="var258">
+		<span class ="label">TURN-</span>
+		<input type="range" class="range" min="0.00" max="1.00" value="0.00" step="0.1">
+		<output class="bubble"></output>
+	</div>
+	<div class="range-wrap" id="var259">
+		<span class ="label">TURN BIAS</span>
+		<input type="range" class="range" min="0.00" max="1.00" value="0.00" step="0.1">
+		<output class="bubble"></output>
+	</div>
+	<div class="range-wrap" id="var512">
+		<span class ="label">yaw</span>
+		<input type="range" class="range" min="-1000" max="1000.0" value="0.0" step="0.1">
+		<output class="bubble"></output>
+	</div>
+</div>
+<div id="MOTORS" class="tabcontent">
+	<div class="range-wrap" id="var320">
+		<span class ="label">PWM MAX</span>
+		<input type="range" class="range" min="0" max="65535" value="0" step="5">
+		<output class="bubble"></output>
+	</div>
+	<div class="range-wrap" id="var321">
+		<span class ="label">CLK DIV</span>
+		<input type="range" class="range" min="1.0" max="25.0" value="0.0" step="0.1">
+		<output class="bubble"></output>
+	</div>
+	<div class="range-wrap" id="var322">
+		<span class ="label">RAMP STEP</span>
+		<input type="range" class="range" min="0.00" max="1.00" value="0.00" step="0.05">
+		<output class="bubble"></output>
+	</div>
+	<div class="range-wrap" id="var323">
+		<span class ="label">RAMP SLOPE</span>
+		<input type="range" class="range" min="0.00" max="1.00" value="0.00" step="0.05">
+		<output class="bubble"></output>
+	</div>
+	<div class="range-wrap" id="var324">
+		<span class ="label">RAMP STEP TIME</span>
+		<input type="range" class="range" min="0" max="1000" value="0" step="1">
+		<output class="bubble"></output>
+	</div>
+	<div class="range-wrap" id="var325">
+		<span class ="label">SPEED MAX+</span>
+		<input type="range" class="range" min="0.00" max="1.00" value="0.00" step="0.05">
+		<output class="bubble"></output>
+	</div>
+	<div class="range-wrap" id="var326">
+		<span class ="label">SPEED MAX-</span>
+		<input type="range" class="range" min="0.00" max="1.00" value="0.00" step="0.05">
+		<output class="bubble"></output>
+	</div>
+</div>
+</center>
+</body>
+</html>
