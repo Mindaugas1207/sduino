@@ -59,6 +59,7 @@ void MotorDriver_s::setPWM_CLK_DIV(float _PWM_CLK_DIV)
 void MotorDriver_s::setDuty(float _Duty)
 {
     if (_Duty > DeadZone) Duty = std::max(_Duty, Bias);
+    else if (_Duty < -DeadZone) Duty = std::min(_Duty, -Bias);
     else Duty = 0.0f;
     int32_t pwm = Duty * PWM_WRAP_VALUE;
     int32_t max = PWM_WRAP_VALUE;
@@ -83,6 +84,8 @@ void MotorDriver_s::loadConfiguration(Config_t _Config)
     setPWM_PIN2(_Config.PWM_PIN2);
     setPWM_WRAP_VALUE(_Config.PWM_WRAP_VALUE);
     setPWM_CLK_DIV(_Config.PWM_CLK_DIV);
+    setBias(_Config.Bias);
+    setDeadZone(_Config.DeadZone);
 }
 
 MotorDriver_s::Config_t MotorDriver_s::getConfiguration()
@@ -92,6 +95,8 @@ MotorDriver_s::Config_t MotorDriver_s::getConfiguration()
         .PWM_PIN2 = getPWM_PIN2(),
         .PWM_WRAP_VALUE = getPWM_WRAP_VALUE(),
         .PWM_CLK_DIV = getPWM_CLK_DIV(),
+        .Bias = getBias(),
+        .DeadZone = getDeadZone(),
     };
 }
 
@@ -124,23 +129,48 @@ void MotorDriver_s::process(absolute_time_t _TimeNow)
     }
 }
 
-int Servo_s::init(uint _Out_pin)
+int ESC_s::init(uint _PWM_PIN)
 {
-    Out_pin = _Out_pin;
-    return servo_hw_init(SERVO_PWM_CLKDIV, SERVO_PWM_PERIOD, Out_pin);
+    PWM_PIN = _PWM_PIN;
+    gpio_set_function(_PWM_PIN, GPIO_FUNC_PWM);
+    PWM = pwm_gpio_to_slice_num(_PWM_PIN);
+    pwm_set_clkdiv(PWM, SERVO_PWM_CLKDIV);
+    pwm_set_wrap(PWM, SERVO_PWM_PERIOD);
+    pwm_set_gpio_level(PWM_PIN, SERVO_PWM_MIN);
+    pwm_set_enabled(PWM, true);
+
+    return true;
 }
 
-void Servo_s::setSpeed(float _Speed)
+void ESC_s::setSpeed(float _Speed)
 {
-    uint pwm = SERVO_PWM_MIN * _Speed + SERVO_PWM_MIN;
+    int32_t pwm = (SERVO_PWM_MAX - SERVO_PWM_MIN) * _Speed + SERVO_PWM_MIN;
     pwm = pwm > SERVO_PWM_MAX ? SERVO_PWM_MAX : (pwm < SERVO_PWM_MIN ? SERVO_PWM_MIN : pwm);
-    pwm_set_gpio_level(Out_pin, pwm);
+    PWM_Value = pwm;
 }
 
-void Servo_s::setAngle(float _Angle)
+// void ESC_s::setAngle(float _Angle)
+// {
+//     uint pwm = SERVO_PWM_MIN * (_Angle / 180.0f) + SERVO_PWM_MIN;
+//     pwm = pwm > SERVO_PWM_MAX ? SERVO_PWM_MAX : (pwm < SERVO_PWM_MIN ? SERVO_PWM_MIN : pwm);
+//     pwm_set_gpio_level(Out_pin, pwm);
+// }
+
+void ESC_s::start()
 {
-    uint pwm = SERVO_PWM_MIN * (_Angle / 180.0f) + SERVO_PWM_MIN;
-    pwm = pwm > SERVO_PWM_MAX ? SERVO_PWM_MAX : (pwm < SERVO_PWM_MIN ? SERVO_PWM_MIN : pwm);
-    pwm_set_gpio_level(Out_pin, pwm);
+    Enabled = true;
 }
 
+void ESC_s::stop()
+{
+    pwm_set_gpio_level(PWM_PIN, SERVO_PWM_MIN);
+    Enabled = false;
+}
+
+void ESC_s::process()
+{
+    if (Enabled)
+    {
+        pwm_set_gpio_level(PWM_PIN, PWM_Value);
+    }
+}

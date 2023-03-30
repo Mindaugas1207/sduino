@@ -26,7 +26,7 @@ bool Interface_s::parseCommand(char *CmdStr)
 {
     if (strncmp(CmdStr, "SET", sizeof("SET") - 1) == 0)
         return doSet(CmdStr + sizeof("SET") - 1);
-    else if (strncmp(CmdStr, "GET( ALL )", sizeof("GET( ALL )") - 1) == 0)
+    else if (strncmp(CmdStr, "GET(ALL)", sizeof("GET(ALL)") - 1) == 0)
         return doGetAll();
     else if (strncmp(CmdStr, "GET", sizeof("GET") - 1) == 0)
         return doGet(CmdStr + sizeof("GET") - 1);
@@ -47,7 +47,7 @@ bool Interface_s::doGetAll()
         switch (Status)
         {
         case INTERFACE_GET_OK:
-            n += sprintf(&buff[n], !StartFlag ? ",\"%X\":%.9g" : "\"%X\":%.9g", i, Value);
+            n += sprintf(&buff[n], !StartFlag ? ",\"%X\":%g" : "\"%X\":%g", i, Value);
             StartFlag = false;
             if (n >= INTERFACE_BULK_TRANSFER_SIZE - 32)
             {
@@ -76,7 +76,7 @@ bool Interface_s::doGetAll()
     #endif
 
     #ifdef INTERFACE_DEBUG
-    printf("CMD:GET( ALL )->OK\n");
+    printf("CMD:GET(ALL)->OK\n");
     #endif
 
     return true;
@@ -86,7 +86,7 @@ bool Interface_s::doGet(char *CmdStr)
 {
     int Address = 0;
 
-    if (sscanf(CmdStr, "( %X )", &Address) != 1)
+    if (sscanf(CmdStr, "(%X)", &Address) != 1)
     {
         #ifdef INTERFACE_DEBUG
         printf("CMD:GET->PARSE_FAIL\n");
@@ -99,17 +99,17 @@ bool Interface_s::doGet(char *CmdStr)
     if (Status != INTERFACE_GET_OK)
     {
         #ifdef INTERFACE_DEBUG
-        printf("CMD:GET( %X )->GET_FAIL\n");
+        printf("CMD:GET(%X)->GET_FAIL\n");
         #endif
         return false;
     }
 
     char buff[64];
-    sprintf(buff, "\"%X\":%.9g\n", Address, Value);
+    sprintf(buff, "\"%X\":%g\n", Address, Value);
     uart_puts(uart_internal, buff);
 
     #ifdef INTERFACE_DEBUG
-    printf("CMD:GET( %X )->OK(%g)\n", Address, Value);
+    printf("CMD:GET(%X)->OK(%g)\n", Address, Value);
     #endif
 
     return true;
@@ -120,7 +120,7 @@ bool Interface_s::doSet(char *CmdStr)
     int Address = 0;
     float Value = 0.0f;
 
-    if (sscanf(CmdStr, "( %X : %g )", &Address, &Value) != 2)
+    if (sscanf(CmdStr, "(%X:%g)", &Address, &Value) != 2)
     {
         #ifdef INTERFACE_DEBUG
         printf("CMD:SET->PARSE_FAIL\n");
@@ -132,13 +132,13 @@ bool Interface_s::doSet(char *CmdStr)
     if (setCallback(Address, Value) != INTERFACE_SET_OK)
     {
         #ifdef INTERFACE_DEBUG
-        printf("CMD:SET( %X : %g )->SET_FAIL\n", Address, Value);
+        printf("CMD:SET(%X:%g)->SET_FAIL\n", Address, Value);
         #endif
         return false;
     }
 
     #ifdef INTERFACE_DEBUG
-    printf("CMD:SET( %X : %g )->OK\n", Address, Value);
+    printf("CMD:SET(%X:%g)->OK\n", Address, Value);
     #endif
 
     return true;

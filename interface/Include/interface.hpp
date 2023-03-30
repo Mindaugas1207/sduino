@@ -42,4 +42,16 @@ public:
 
 };
 
+// namespace Interface
+// {
+
+// class Range_s {
+//     float get(void);
+//     void set(float);
+// };
+
+// };
+
+
+
 #endif

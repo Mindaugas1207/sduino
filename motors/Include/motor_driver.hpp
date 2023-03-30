@@ -70,13 +70,19 @@ public:
     void process(absolute_time_t _TimeNow);
 };
 
-class Servo_s {
-    uint Out_pin;
+class ESC_s {
+    uint PWM_PIN;
+    uint PWM;
+    float Speed;
+    uint PWM_Value;
+    bool Enabled;
 public:
-    Servo_s() {};
-    int init(uint _Out_pin);
+    int init(uint _PWM_PIN);
     void setSpeed(float _Speed);
-    void setAngle(float _Angle);
+    float getSpeed() { return Speed; };
+    void start();
+    void stop();
+    void process();
 };
 
 #endif

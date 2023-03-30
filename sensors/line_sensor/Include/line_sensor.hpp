@@ -157,7 +157,7 @@ public:
 
     void start(void);
     void stop(void);
-    void process(absolute_time_t _TimeNow);
+    bool process(absolute_time_t _TimeNow);
 
     std::tuple<float, bool> compute(std::array<uint, LINE_SENSOR_NUM_SENSORS> & _input);
     float computeLineHeading(float _FrameHeading);

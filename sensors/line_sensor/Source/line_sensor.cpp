@@ -182,12 +182,12 @@ void LineSensor_s::startCalibration()
 void LineSensor_s::start(void) { line_sensor_hw_start_read(); }
 void LineSensor_s::stop(void) { line_sensor_hw_stop_read(); }
 
-void LineSensor_s::process(absolute_time_t _TimeNow)
+bool LineSensor_s::process(absolute_time_t _TimeNow)
 {
     Available = line_sensor_hw_is_new_data_available();
 
     if (!Available)
-        return;
+        return false;
     
     std::array<uint, LINE_SENSOR_NUM_SENSORS> buffer;
     line_sensor_hw_read(buffer.data());
@@ -196,7 +196,7 @@ void LineSensor_s::process(absolute_time_t _TimeNow)
         calibrate(buffer, _TimeNow);
     
     std::tie(Position, Detected) = compute(buffer);
-    
+    return true;
 }
 
 std::tuple<float, bool> LineSensor_s::compute(std::array<uint, LINE_SENSOR_NUM_SENSORS> & _input)
@@ -307,8 +307,6 @@ float LineSensor_s::computeLineHeading(float _FrameHeading)
     {
         auto HeadingChange = (h - LastFrameHeading) * LINE_SENSOR_ANGLE_RAD_TO_VALUE;
 
-        constexpr auto HChange = (LINE_SENSOR_TURN90_ANGLE_RAD - 0) * LINE_SENSOR_ANGLE_RAD_TO_VALUE;
-
         if (Position < (LINE_SENSOR_TURN90_VALUE - LINE_SENSOR_STEP_VALUE) && Position > -(LINE_SENSOR_TURN90_VALUE - LINE_SENSOR_STEP_VALUE))
         {
             
@@ -372,10 +370,10 @@ void LineSensor_s::updateLeds(absolute_time_t _TimeNow)
         line_sensor_hw_set_led_power(hw_inst, LINE_SENSOR_EDGE_LED_FIRST, LedBrightness);
         line_sensor_hw_set_led_power(hw_inst, LINE_SENSOR_EDGE_LED_LAST, LedBrightness);
     }
-    else if (LineHeading > LINE_SENSOR_LAST_ANGLE_RAD)
-        line_sensor_hw_set_led_power(hw_inst, LINE_SENSOR_EDGE_LED_FIRST, LineHeading * LedBrightness * 1.5f / LINE_SENSOR_TURN90_ANGLE_RAD);
-    else if (LineHeading < -LINE_SENSOR_LAST_ANGLE_RAD)
-        line_sensor_hw_set_led_power(hw_inst, LINE_SENSOR_EDGE_LED_LAST, -LineHeading * LedBrightness * 1.5f / LINE_SENSOR_TURN90_ANGLE_RAD);
+    else if (Position > LINE_SENSOR_LAST_VALUE)
+        line_sensor_hw_set_led_power(hw_inst, LINE_SENSOR_EDGE_LED_FIRST, LineHeading * LedBrightness);
+    else if (Position < -LINE_SENSOR_LAST_VALUE)
+        line_sensor_hw_set_led_power(hw_inst, LINE_SENSOR_EDGE_LED_LAST, -LineHeading * LedBrightness);
     
     LedUpdateTimeout = delayed_by_us(_TimeNow, 1000000 / LINE_SENSOR_LED_UPDATE_FREQUENCY);
     line_sensor_hw_led_update(hw_inst);

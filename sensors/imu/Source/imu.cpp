@@ -268,10 +268,10 @@ void IMU_s::calibrationRun(absolute_time_t _TimeNow)
         LastTime = get_absolute_time();
     }
     else {
-        printf("Accel mean %f, %f, %f\n", Accelerometer.Mean.X, Accelerometer.Mean.Y, Accelerometer.Mean.Z);
-        printf("Accel bias %f, %f, %f\n", Accelerometer.Bias.X, Accelerometer.Bias.Y, Accelerometer.Bias.Z);
-        printf("Gyro mean %f, %f, %f\n", Gyroscope.Mean.X, Gyroscope.Mean.Y, Gyroscope.Mean.Z);
-        printf("Gyro bias %f, %f, %f\n", Gyroscope.Bias.X, Gyroscope.Bias.Y, Gyroscope.Bias.Z);
+        printf("DBG:IMU_ACCEL_MEAN(%f,%f,%f)\n", Accelerometer.Mean.X, Accelerometer.Mean.Y, Accelerometer.Mean.Z);
+        printf("DBG:IMU_ACCEL_BIAS(%f,%f,%f)\n", Accelerometer.Bias.X, Accelerometer.Bias.Y, Accelerometer.Bias.Z);
+        printf("DBG:IMU_GYRO_MEAN(%f,%f,%f)\n", Gyroscope.Mean.X, Gyroscope.Mean.Y, Gyroscope.Mean.Z);
+        printf("DBG:IMU_GYRO_BIAS(%f,%f,%f)\n", Gyroscope.Bias.X, Gyroscope.Bias.Y, Gyroscope.Bias.Z);
 #ifdef IMU_USE_MAG
         printf("Mag Max %f, %f, %f\n", Magnetometer.Max.X, Magnetometer.Max.Y, Magnetometer.Max.Z);
         printf("Mag Min %f, %f, %f\n", Magnetometer.Min.X, Magnetometer.Min.Y, Magnetometer.Min.Z);

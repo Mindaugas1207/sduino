@@ -17,6 +17,7 @@
 
 #include "functional"
 #include <algorithm>
+#include <string>
 
 class LineFollower_s
 {
@@ -42,6 +43,9 @@ class LineFollower_s
         CMD_NVM_SAVE                      = 0x0007,
         CMD_LINE_SLEEP                    = 0x0008,
         CMD_LINE_WAKEUP                   = 0x0009,
+        CMD_ESC_ARM                       = 0x000A,
+        CMD_ESC_START                     = 0x000B,
+        CMD_ESC_STOP                      = 0x000C,
         /*  Common variables              = 0x0100,*/
         VAR_SPEED                         = 0x0100,
         VAR_TURN_POS                      = 0x0101,
@@ -49,6 +53,7 @@ class LineFollower_s
         VAR_TURN_BIAS_POS                 = 0x0103,
         VAR_TURN_BIAS_NEG                 = 0x0104,
         VAR_SPEED_DOWN                    = 0x0105,
+        VAR_ESC_SPEED                     = 0x0106,
         /*  IMU variables                 = 0x0200,*/
         /*  Line variables                = 0x0220,*/
         VAR_LINE_EMITTER_POWER            = 0x0220,
@@ -135,16 +140,13 @@ class LineFollower_s
         float TurnMaxPositive;
         float TurnMaxNegative;
         float SpeedDown;
+        float EscSpeed;
         uint32_t LockCode;
         void setLockCode(uint32_t _LockCode) { LockCode = _LockCode; }
         uint32_t getLockCode() { return LockCode; }
     };
     absolute_time_t PrintTime;
     absolute_time_t SleepTime;
-    int EncoderPulseCountA;
-    int EncoderPulseCountB;
-    float EncoderSpeedA;
-    float EncoderSpeedB;
 public:
     Config_s Config;
 
@@ -169,6 +171,58 @@ public:
     void computeControl(absolute_time_t _TimeNow);
 
     void motorControl(absolute_time_t _TimeNow);
+
+    #define xs(x) __XSTRING(x)
+
+    int rangeAdd(char * File, const char * VarName, uint VarId, const char * Min, const char * Max, const char * Step)
+    {
+        return sprintf(File, "<div class=\"range-wrap\" id=\"%X\">"
+                             "<span class =\"label\">%s</span>"
+		                     "<input type=\"range\" class=\"range\" min=\"%s\" max=\"%s\" value=\"0\" step=\"%s\">"
+		                     "<output class=\"bubble\">"
+                             "</output></div>",
+                             VarId, VarName, Min, Max, Step);
+    }
+
+    #define RANGE_ADD(File, VarName, Min, Max, Step) sprintf(File, "<div class=\"range-wrap\" id=\"%X\">"\
+                                                                   "<span class =\"label\">" xs(VarName) "</span>"\
+                                                                   "<input type=\"range\" class=\"range\" min=\"" xs(Min) "\" max=\"" xs(Max) "\" value=\"0\" step=\"" xs(Step) "\">"\
+                                                                   "<output class=\"bubble\">"\
+                                                                   "</output></div>", VarName)
+
+    int tabBegin(char * File, const char * TabName)
+    {
+        return sprintf(File, "<div id=\"%s\" class=\"tabcontent\">", TabName);
+    }
+
+    int tabEnd(char * File)
+    {
+        return sprintf(File, "</div>");
+    }
+
+    void interfaceFileConstruct()
+    {
+        char buffer[255];
+        //tabBegin(buffer, "PID0");
+        RANGE_ADD(buffer, VAR_PID0_SETPOINT, 0, 1, 0.001);
+        //rangeAdd(buffer, __XSTRING(VAR_PID0_SETPOINT), VAR_PID0_SETPOINT, "0", "1", "0.001");
+        tabEnd(buffer);
+    }
+    // constexpr auto ccatc(std::string, const char s2[])
+    // {
+    //     return cat;
+    // }
+
+    
+    
+    // void fileNewTabBegin(char file[], char TabName[])
+    // {
+    //     constexpr const char ff[] = "help";
+    //     constexpr char stc[100];
+    //     stc += ff;
+
+    //     int n = sprintf(file, "<div id=\"%s\" class=\"tabcontent\">", TabName);
+    // }
 };
 
 class Blink_s
