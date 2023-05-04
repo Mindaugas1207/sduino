@@ -35,7 +35,7 @@
 #define LINE_SENSOR_LED_UPDATE_FREQUENCY 30
 #define LINE_SENSOR_LED_BLINK_FREQUENCY_CALIB 10
 #define LINE_SENSOR_CALIBRATION_TIME 3500
-#define LINE_SENSOR_TIMEOUT_TIME 1000
+#define LINE_SENSOR_TIMEOUT_TIME 500
 
 #define LINE_SENSOR_MAX_ANGLE_RAD 1.570796326794900f
 #define LINE_SENSOR_POS_TO_ANGLE_RAD 0.043505588000279f
@@ -47,8 +47,10 @@
 #define LINE_SENSOR_TURN90_ANGLE_RAD ((float)(M_PI / 2))
 #define LINE_SENSOR_TURN90_VALUE (LINE_SENSOR_TURN90_ANGLE_RAD * LINE_SENSOR_ANGLE_RAD_TO_VALUE)
 
+#define LINE_SENSOR_CENTERLINE_TIMEOUT_US 2200
 
-
+#define LINE_SENSOR_INDEX_LEFT_TH (LINE_SENSOR_CENTER_INDEX + (LINE_SENSOR_ANALOG_WIDTH / 2))
+#define LINE_SENSOR_INDEX_RIGHT_TH (LINE_SENSOR_CENTER_INDEX - (LINE_SENSOR_ANALOG_WIDTH / 2))
 
 #define LINE_SENSOR_OK PICO_OK
 #define LINE_SENSOR_ERROR PICO_ERROR_GENERIC
@@ -96,6 +98,19 @@ public:
 };
 
 class LineSensor_s {
+public:
+enum LineRange_e {
+        LINE_CENTER,
+        LINE_LEFT,
+        LINE_RIGHT,
+    };
+
+    enum LineTurn_e {
+        LINE_NO_TURN,
+        LINE_TURN_LEFT,
+        LINE_TURN_RIGHT,
+    };
+private:
     struct Config_s {
         std::array<Sensor_s::Config_t, LINE_SENSOR_NUM_SENSORS> SensorConfig;
         float EmittersPower;
@@ -111,6 +126,7 @@ class LineSensor_s {
     absolute_time_t LedBlinkTimeout;
     absolute_time_t CalibrationTimeout;
     absolute_time_t SensorTimeout;
+    absolute_time_t CenterLineTimeout;
 
     float Position;
     float OffsetAverage;
@@ -122,15 +138,25 @@ class LineSensor_s {
     float LineHeading;
     float ph;
 
+    float LineExpectedHeading;
+    enum LineRange_e LineRange;
+
+    enum LineTurn_e LineTurn;
+
     int CenterLineIndex;
-    int LastCenterLineIndex;
-    
+    bool TLock;
     bool Detected;
     bool SensorTimedOut;
     bool Available;
     bool Calibrated;
+    bool DisplayAnalog;
+    bool LiveUpdate;
+
+    absolute_time_t DBG_PrintTimeout;
 public:
     typedef Config_s Config_t;
+    typedef LineRange_e LineRange_t;
+    typedef LineTurn_e LineTurn_t;
 
     int init(line_sesnor_hw_inst_t *_hw_inst);
 
@@ -151,6 +177,11 @@ public:
     void setLedsBrightness(float _Brightness);
     float getLedsBrightness();
 
+    void setDisplayAnalog(bool _Enabled) { DisplayAnalog = _Enabled; }
+    bool getDisplayAnalog(void) { return DisplayAnalog; }
+    void setLiveUpdate(bool _Enabled) { LiveUpdate = _Enabled; }
+    bool getLiveUpdate(void) { return LiveUpdate; }
+
     void calibrate(std::array<uint, LINE_SENSOR_NUM_SENSORS> & _Input, absolute_time_t _TimeNow);
     void startCalibration(uint32_t _Duration_ms);
     void startCalibration();
@@ -159,9 +190,11 @@ public:
     void stop(void);
     bool process(absolute_time_t _TimeNow);
 
-    std::tuple<float, bool> compute(std::array<uint, LINE_SENSOR_NUM_SENSORS> & _input);
+    std::tuple<float, bool> compute(absolute_time_t _TimeNow, std::array<uint, LINE_SENSOR_NUM_SENSORS> & _input);
     float computeLineHeading(float _FrameHeading);
     bool isDetected(void) {return Detected;};
+
+    std::tuple<LineRange_t, LineTurn_t> getLineDesc(void) { return {LineRange, LineTurn}; }
 
     void updateLeds(absolute_time_t _TimeNow);
 

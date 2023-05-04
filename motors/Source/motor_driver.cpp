@@ -120,6 +120,19 @@ void MotorDriver_s::stop()
     Enabled = false;
 }
 
+void MotorDriver_s::brake()
+{
+    Duty = 0.0f;
+    PWM1_Value = 0;
+    PWM2_Value = 0;
+    pwm_set_gpio_level(PWM_PIN1, PWM_WRAP_VALUE);
+    pwm_set_gpio_level(PWM_PIN2, PWM_WRAP_VALUE);
+
+    //pwm_set_enabled(PWM1, false);
+    //pwm_set_enabled(PWM2, false);
+    Enabled = false;
+}
+
 void MotorDriver_s::process(absolute_time_t _TimeNow)
 {
     if (Enabled)
@@ -138,7 +151,8 @@ int ESC_s::init(uint _PWM_PIN)
     pwm_set_wrap(PWM, SERVO_PWM_PERIOD);
     pwm_set_gpio_level(PWM_PIN, SERVO_PWM_MIN);
     pwm_set_enabled(PWM, true);
-
+    SpinUp = false;
+    Enabled = false;
     return true;
 }
 
@@ -156,8 +170,14 @@ void ESC_s::setSpeed(float _Speed)
 //     pwm_set_gpio_level(Out_pin, pwm);
 // }
 
-void ESC_s::start()
+void ESC_s::start(float _StartSpeed, int _SpintUpTime)
 {
+    if (Enabled) return;
+    SpinUpTime = make_timeout_time_ms(_SpintUpTime);
+    SpinUp = true;
+    int32_t pwm = (SERVO_PWM_MAX - SERVO_PWM_MIN) * _StartSpeed + SERVO_PWM_MIN;
+    pwm = pwm > SERVO_PWM_MAX ? SERVO_PWM_MAX : (pwm < SERVO_PWM_MIN ? SERVO_PWM_MIN : pwm);
+    PWM_Value_Start = pwm;
     Enabled = true;
 }
 
@@ -167,10 +187,25 @@ void ESC_s::stop()
     Enabled = false;
 }
 
-void ESC_s::process()
+void ESC_s::process(absolute_time_t _TimeNow)
 {
     if (Enabled)
     {
-        pwm_set_gpio_level(PWM_PIN, PWM_Value);
+        if (SpinUp)
+        {
+            if (to_us_since_boot(_TimeNow) > to_us_since_boot(SpinUpTime))
+            {
+                SpinUp = false;
+            }
+            else
+            {
+                pwm_set_gpio_level(PWM_PIN, PWM_Value_Start);
+            }
+        }
+        else
+        {
+            pwm_set_gpio_level(PWM_PIN, PWM_Value);
+        }
+        
     }
 }

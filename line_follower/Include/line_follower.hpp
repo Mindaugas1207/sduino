@@ -29,6 +29,8 @@ class LineFollower_s
     bool NVM_LOAD_OK = false;
     bool NVM_SAVE_OK = false;
     bool NVM_ERASE_OK = false;
+    bool Start_ESC = false;
+    bool Stop_ESC = false;
 
     enum InterfaceVariables{
     //HEX FORMAT 16bit
@@ -46,20 +48,22 @@ class LineFollower_s
         CMD_ESC_ARM                       = 0x000A,
         CMD_ESC_START                     = 0x000B,
         CMD_ESC_STOP                      = 0x000C,
+        VAR_BAT_VOLTAGE                   = 0x000D,
         /*  Common variables              = 0x0100,*/
         VAR_SPEED                         = 0x0100,
-        VAR_TURN_POS                      = 0x0101,
-        VAR_TURN_NEG                      = 0x0102,
-        VAR_TURN_BIAS_POS                 = 0x0103,
-        VAR_TURN_BIAS_NEG                 = 0x0104,
-        VAR_SPEED_DOWN                    = 0x0105,
-        VAR_ESC_SPEED                     = 0x0106,
+        VAR_ESC_SPEED                     = 0x0101,
+        VAR_STEERING_GAIN                 = 0x0102,
+        VAR_STEERING_GAIN2                = 0x0103,
+        VAR_CRUISE_GAIN                   = 0x0104,
+        VAR_CRUISE_GAIN2                  = 0x0105,
         /*  IMU variables                 = 0x0200,*/
         /*  Line variables                = 0x0220,*/
         VAR_LINE_EMITTER_POWER            = 0x0220,
         VAR_LINE_LED_BRIGHTNESS           = 0x0221,
         VAR_LINE_TURN_GAIN_1              = 0x0222,
         VAR_LINE_TURN_GAIN_2              = 0x0223,
+        CMD_LINE_TOGGLE_DISPLAY           = 0x0224,
+        CMD_LINE_TOGGLE_LIVE              = 0x0225,
         /*  Drive variables               = 0x0240,*/
         VAR_DRIVE0_PWM_WRAP_VALUE         = 0x0240,
         VAR_DRIVE0_PWM_CLK_DIV            = 0x0241,
@@ -70,54 +74,18 @@ class LineFollower_s
         VAR_DRIVE1_BIAS                   = 0x0246,
         VAR_DRIVE1_DEADZONE               = 0x0247,
         /*  PID0 variables                = 0x0260,*/
-        VAR_PID0_SETPOINT                 = 0x0260,
-        VAR_PID0_GAIN                     = 0x0261,
-        VAR_PID0_INTEGRAL_TIME            = 0x0262,
-        VAR_PID0_INTEGRAL_LIMIT           = 0x0263,
-        VAR_PID0_INTEGRAL_RATE_LIMIT      = 0x0264,
-        VAR_PID0_INTEGRAL_ANTI_WINDUP     = 0x0265,
-        VAR_PID0_DERIVATIVE_TIME          = 0x0266,
-        VAR_PID0_DERIVATIVE_CUTOFF        = 0x0267,
-        VAR_PID0_OUTPUT_LIMIT             = 0x0268,
-        VAR_PID0_DEADZONE                 = 0x0269,
-        /*  PID1 variables                = 0x0280,*/
-        VAR_PID1_SETPOINT                 = 0x0280,
-        VAR_PID1_GAIN                     = 0x0281,
-        VAR_PID1_INTEGRAL_TIME            = 0x0282,
-        VAR_PID1_INTEGRAL_LIMIT           = 0x0283,
-        VAR_PID1_INTEGRAL_RATE_LIMIT      = 0x0284,
-        VAR_PID1_INTEGRAL_ANTI_WINDUP     = 0x0285,
-        VAR_PID1_DERIVATIVE_TIME          = 0x0286,
-        VAR_PID1_DERIVATIVE_CUTOFF        = 0x0287,
-        VAR_PID1_OUTPUT_LIMIT             = 0x0288,
-        VAR_PID1_DEADZONE                 = 0x0289,
-        /*  PID2 variables                = 0x02A0,*/
-        VAR_PID2_SETPOINT                 = 0x02A0,
-        VAR_PID2_GAIN                     = 0x02A1,
-        VAR_PID2_INTEGRAL_TIME            = 0x02A2,
-        VAR_PID2_INTEGRAL_LIMIT           = 0x02A3,
-        VAR_PID2_INTEGRAL_RATE_LIMIT      = 0x02A4,
-        VAR_PID2_INTEGRAL_ANTI_WINDUP     = 0x02A5,
-        VAR_PID2_DERIVATIVE_TIME          = 0x02A6,
-        VAR_PID2_DERIVATIVE_CUTOFF        = 0x02A7,
-        VAR_PID2_OUTPUT_LIMIT             = 0x02A8,
-        VAR_PID2_DEADZONE                 = 0x02A9,
-        /*  PID3 variables                = 0x02C0,*/
-        VAR_PID3_SETPOINT                 = 0x02C0,
-        VAR_PID3_GAIN                     = 0x02C1,
-        VAR_PID3_INTEGRAL_TIME            = 0x02C2,
-        VAR_PID3_INTEGRAL_LIMIT           = 0x02C3,
-        VAR_PID3_INTEGRAL_RATE_LIMIT      = 0x02C4,
-        VAR_PID3_INTEGRAL_ANTI_WINDUP     = 0x02C5,
-        VAR_PID3_DERIVATIVE_TIME          = 0x02C6,
-        VAR_PID3_DERIVATIVE_CUTOFF        = 0x02C7,
-        VAR_PID3_OUTPUT_LIMIT             = 0x02C8,
-        VAR_PID3_DEADZONE                 = 0x02C9,
+        VAR_PID0_GAIN                     = 0x0260,
+        VAR_PID0_INTEGRAL_TIME            = 0x0261,
+        VAR_PID0_INTEGRAL_LIMIT           = 0x0262,
+        VAR_PID0_INTEGRAL_RATE_LIMIT      = 0x0263,
+        VAR_PID0_DERIVATIVE_TIME          = 0x0264,
+        VAR_PID0_DERIVATIVE_CUTOFF        = 0x0265,
+        VAR_PID0_DEADZONE                 = 0x0266,
 
         CMD_FIRST                         = CMD_NONE,
         CMD_LAST                          = CMD_LINE_WAKEUP,
         VAR_FIRST                         = VAR_SPEED,
-        VAR_LAST                          = VAR_PID3_DEADZONE,
+        VAR_LAST                          = VAR_PID0_DEADZONE,
         INTERFACE_ENUM_FIRST              = CMD_FIRST,
         INTERFACE_ENUM_LAST               = VAR_LAST + 1,
         INTERFACE_ENUM_SIZE               = VAR_LAST
@@ -130,23 +98,20 @@ class LineFollower_s
         LineSensor_s::Config_t LineSensor;
         MotorDriver_s::Config_t DriveA;
         MotorDriver_s::Config_t DriveB;
-        PID_s::Config_t PID_DriveA;
-        PID_s::Config_t PID_DriveB;
-        PID_s::Config_t PID_Cruise;
-        PID_s::Config_t PID_Steering;
+        PID_s::Config_t PID_Drives;
         float ForwardSpeed;
-        float TurnBiasPositive;
-        float TurnBiasNegative;
-        float TurnMaxPositive;
-        float TurnMaxNegative;
-        float SpeedDown;
         float EscSpeed;
+        float SteeringGain;
+        float CruiseGain;
+        float SteeringGain2;
+        float CruiseGain2;
         uint32_t LockCode;
         void setLockCode(uint32_t _LockCode) { LockCode = _LockCode; }
         uint32_t getLockCode() { return LockCode; }
     };
     absolute_time_t PrintTime;
     absolute_time_t SleepTime;
+    absolute_time_t StartTime;
 public:
     Config_s Config;
 
@@ -164,6 +129,9 @@ public:
     void stop(void);
     void stop_error(void);
 
+    void ESC_Start();
+    void ESC_Stop();
+
     void sleep(void);
     void wakeup(void);
 
@@ -173,6 +141,17 @@ public:
     void motorControl(absolute_time_t _TimeNow);
 
     #define xs(x) __XSTRING(x)
+
+    #define STRINGIFY_IMPL(s) #s
+    #define STRINGIFY(s) STRINGIFY_IMPL(s)
+    #define ARG1_IMPL(a, ...) a
+    #define ARG1(...) ARG1_IMPL(__VA_ARGS__, 0)
+    #define DumpStr(...) DumpString(STRINGIFY(ARG1(__VA_ARGS__)),__VA_ARGS__)
+    
+    void DumpString(const char* varname, char* var, int optionalvar=0) {
+        printf("%s : '%s'\n", varname, var);
+        printf("blah: %d", optionalvar);
+    }
 
     int rangeAdd(char * File, const char * VarName, uint VarId, const char * Min, const char * Max, const char * Step)
     {
@@ -190,6 +169,8 @@ public:
                                                                    "<output class=\"bubble\">"\
                                                                    "</output></div>", VarName)
 
+    //#define RANGE_STRING()
+
     int tabBegin(char * File, const char * TabName)
     {
         return sprintf(File, "<div id=\"%s\" class=\"tabcontent\">", TabName);
@@ -204,7 +185,7 @@ public:
     {
         char buffer[255];
         //tabBegin(buffer, "PID0");
-        RANGE_ADD(buffer, VAR_PID0_SETPOINT, 0, 1, 0.001);
+        RANGE_ADD(buffer, 0, 0, 1, 0.001);
         //rangeAdd(buffer, __XSTRING(VAR_PID0_SETPOINT), VAR_PID0_SETPOINT, "0", "1", "0.001");
         tabEnd(buffer);
     }

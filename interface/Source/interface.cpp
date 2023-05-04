@@ -28,6 +28,8 @@ bool Interface_s::parseCommand(char *CmdStr)
         return doSet(CmdStr + sizeof("SET") - 1);
     else if (strncmp(CmdStr, "GET(ALL)", sizeof("GET(ALL)") - 1) == 0)
         return doGetAll();
+    else if (strncmp(CmdStr, "GET(CMDS)", sizeof("GET(CMDS)") - 1) == 0)
+        return doGetCMDS();
     else if (strncmp(CmdStr, "GET", sizeof("GET") - 1) == 0)
         return doGet(CmdStr + sizeof("GET") - 1);
 
@@ -77,6 +79,54 @@ bool Interface_s::doGetAll()
 
     #ifdef INTERFACE_DEBUG
     printf("CMD:GET(ALL)->OK\n");
+    #endif
+
+    return true;
+}
+
+bool Interface_s::doGetCMDS()
+{
+    char buff[INTERFACE_BULK_TRANSFER_SIZE];
+    int n = 0;
+    bool StartFlag = true;
+    bool EndFlag = false;
+    for (int i = 0; i <= 0x000D; i++)
+    {
+        auto [Status, Value] = getCallback(i);
+
+        switch (Status)
+        {
+        case INTERFACE_GET_OK:
+            n += sprintf(&buff[n], !StartFlag ? ",\"%X\":%g" : "\"%X\":%g", i, Value);
+            StartFlag = false;
+            if (n >= INTERFACE_BULK_TRANSFER_SIZE - 32)
+            {
+                buff[n] = '\0';
+                uart_puts(uart_internal, buff);
+                n = 0;
+
+                #ifdef INTERFACE_DEBUG
+                printf(buff);
+                #endif
+            }
+            break;
+        case INTERFACE_GET_NOVAL: break;
+        case INTERFACE_GET_EOF: EndFlag = true; break;
+        default: return false;
+        }
+
+        if (EndFlag) break;
+    }
+
+    buff[n++] = '\n';
+    buff[n] = '\0';
+    uart_puts(uart_internal, buff);
+    #ifdef INTERFACE_DEBUG
+    printf(buff);
+    #endif
+
+    #ifdef INTERFACE_DEBUG
+    printf("CMD:GET(CMDS)->OK\n");
     #endif
 
     return true;

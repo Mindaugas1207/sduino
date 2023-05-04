@@ -34,6 +34,7 @@ public:
     void Process();
 
     bool parseCommand(char *CmdStr);
+    bool doGetCMDS();
     bool doGetAll();
     bool doGet(char *CmdStr);
     bool doSet(char *CmdStr);

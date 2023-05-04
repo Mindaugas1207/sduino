@@ -100,7 +100,7 @@ class IMU_s {
     SF Fusion;
 
     int AccumulatorSamples;
-    const uint32_t BiasCalibrationTime_ms = 10000;
+    const uint32_t BiasCalibrationTime_ms = 5000;
     
 
     bool Calibrated;

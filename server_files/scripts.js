@@ -43,6 +43,50 @@ function loadValues(){
 	xh.send(null);
 }
 
+function loadCmds(){
+	var xh = new XMLHttpRequest();
+	xh.onreadystatechange = function(){
+		if (xh.readyState == 4 && xh.status == 200){
+		var res = JSON.parse(xh.responseText);
+		Object.entries(res).forEach((entry) => {
+			const [id, value] = entry;
+			const wrap = document.getElementById(id);
+			if (wrap !== null) {
+				const range = wrap.querySelector(".range");
+				const bubble = wrap.querySelector(".bubble");
+				if (range !== null || bubble !== null) {
+					range.value = value;
+					setBubble(range, bubble);
+				}
+			}
+			else
+			{
+				const but = document.getElementById(id+":v");
+				if (but !== null)
+				{
+					if (value > 0) {
+						but.style.backgroundColor = "green";
+					}
+					if (value <= 0) {
+						but.style.backgroundColor = "red";
+					}	
+				}
+				else
+				{
+					const butb = document.getElementById(id+":"+"value");
+					if (but !== null) {
+						butb.style.backgroundColor = "green";
+					}
+				}
+			}
+		});
+		}
+	};
+	xh.addEventListener('error', (event) => { alert('Unable to get data!'); });
+	xh.open("GET", "/sduino/data?CMDS=0", true);
+	xh.send(null);
+}
+
 function getValue(id){
 	var xh = new XMLHttpRequest();
 	xh.onreadystatechange = function(){
@@ -57,6 +101,26 @@ function getValue(id){
 				if (range !== null || bubble !== null) {
 					range.value = value;
 					setBubble(range, bubble);
+				}
+			}
+			else
+			{
+				const but = document.getElementById(id+":v");
+				if (but !== null)
+				{
+					if (value > 0) {
+						but.style.backgroundColor = "green";
+					}
+					if (value <= 0) {
+						but.style.backgroundColor = "red";
+					}	
+				}
+				else
+				{
+					const butb = document.getElementById(id+":"+"value");
+					if (but !== null) {
+						butb.style.backgroundColor = "green";
+					}
 				}
 			}
 		});
@@ -96,6 +160,7 @@ function sendData(data) {
 function updateVar(id, val) {
 	const XHR = new XMLHttpRequest();
 	XHR.addEventListener('error', (event) => { alert('Unable to send data!'); });
+	XHR.addEventListener('load', (event) => { getValue(id); });
 	XHR.open("POST", "/sduino/data?" + id + "=" + val);
 	XHR.send(null);
 }

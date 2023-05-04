@@ -67,6 +67,7 @@ public:
 
     void start();
     void stop();
+    void brake();
     void process(absolute_time_t _TimeNow);
 };
 
@@ -75,14 +76,17 @@ class ESC_s {
     uint PWM;
     float Speed;
     uint PWM_Value;
+    uint PWM_Value_Start;
     bool Enabled;
+    bool SpinUp;
+    absolute_time_t SpinUpTime;
 public:
     int init(uint _PWM_PIN);
     void setSpeed(float _Speed);
     float getSpeed() { return Speed; };
-    void start();
+    void start(float _StartSpeed, int _SpintUpTime);
     void stop();
-    void process();
+    void process(absolute_time_t _TimeNow);
 };
 
 #endif
