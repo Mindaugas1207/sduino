@@ -471,7 +471,7 @@ void LineFollower_s::load(void)
         //Load PID_DriveA
         PID_DriveA.loadConfiguration(Config.PID_Drives);
         PID_DriveB.loadConfiguration(Config.PID_Drives);
-        
+        ESC.setSpeed(Config.EscSpeed);
         NVM_CONFIG_OK = true;
         NVM_LOAD_OK = true;
     }
@@ -540,6 +540,8 @@ std::tuple<int, float> LineFollower_s::get(int _Enum)
     case VAR_STEERING_GAIN2:                return {INTERFACE_GET_OK, Config.SteeringGain2};
     case VAR_CRUISE_GAIN:                   return {INTERFACE_GET_OK, Config.CruiseGain};
     case VAR_CRUISE_GAIN2:                  return {INTERFACE_GET_OK, Config.CruiseGain2};
+    case VAR_STEERING_GAIN3:                return {INTERFACE_GET_OK, Config.SteeringGain3};
+    case VAR_CRUISE_GAIN3:                  return {INTERFACE_GET_OK, Config.CruiseGain3};
     /*Driver variables                      */
     case VAR_DRIVE0_PWM_WRAP_VALUE:         return {INTERFACE_GET_OK, DriveA.getPWM_WRAP_VALUE()};
     case VAR_DRIVE0_PWM_CLK_DIV:            return {INTERFACE_GET_OK, DriveA.getPWM_CLK_DIV()};
@@ -595,6 +597,8 @@ int LineFollower_s::set(int _Enum, float _Value)
     case VAR_STEERING_GAIN2:                Config.SteeringGain2 = _Value;                                                                  return INTERFACE_SET_OK;
     case VAR_CRUISE_GAIN:                   Config.CruiseGain = _Value;                                                                     return INTERFACE_SET_OK;
     case VAR_CRUISE_GAIN2:                  Config.CruiseGain2 = _Value;                                                                    return INTERFACE_SET_OK;
+    case VAR_STEERING_GAIN3:                Config.SteeringGain3 = _Value;                                                                  return INTERFACE_SET_OK;
+    case VAR_CRUISE_GAIN3:                  Config.CruiseGain3 = _Value;                                                                    return INTERFACE_SET_OK;
     /*Driver variables                                                                                                                           */
     case VAR_DRIVE0_PWM_WRAP_VALUE:         DriveA.setPWM_WRAP_VALUE(Config.DriveA.PWM_WRAP_VALUE = _Value);                                return INTERFACE_SET_OK;
     case VAR_DRIVE0_PWM_CLK_DIV:            DriveA.setPWM_CLK_DIV(Config.DriveA.PWM_CLK_DIV = _Value);                                      return INTERFACE_SET_OK;
@@ -681,18 +685,18 @@ void LineFollower_s::computeControl(absolute_time_t _TimeNow)
     //EncoderPulseCountB = ENC_Data.PulseCountB;
     //auto [Steps1, Steps2] = getSteps();
     
-    if (to_us_since_boot(get_absolute_time()) > to_us_since_boot(PrintTime))
-    {
-        printf("Detected: %s, Heading: %.6f, Range: %s, Turn: %s\n",
-            Detected ? "True " : "False",
-            LineHeading, 
-            Range == LineSensor_s::LineRange_t::LINE_CENTER ? "CENTER" :
-            Range == LineSensor_s::LineRange_t::LINE_LEFT ? "LEFT  " : "RIGHT ",
-            Turn == LineSensor_s::LineTurn_t::LINE_NO_TURN ? "NONE  " :
-            Turn == LineSensor_s::LineTurn_t::LINE_TURN_LEFT ? "LEFT  " : "RIGHT "
-        );
-        PrintTime = make_timeout_time_ms(200);
-    }
+    // if (to_us_since_boot(get_absolute_time()) > to_us_since_boot(PrintTime))
+    // {
+    //     printf("Detected: %s, Heading: %.6f, Range: %s, Turn: %s\n",
+    //         Detected ? "True " : "False",
+    //         LineHeading, 
+    //         Range == LineSensor_s::LineRange_t::LINE_CENTER ? "CENTER" :
+    //         Range == LineSensor_s::LineRange_t::LINE_LEFT ? "LEFT  " : "RIGHT ",
+    //         Turn == LineSensor_s::LineTurn_t::LINE_NO_TURN ? "NONE  " :
+    //         Turn == LineSensor_s::LineTurn_t::LINE_TURN_LEFT ? "LEFT  " : "RIGHT "
+    //     );
+    //     PrintTime = make_timeout_time_ms(200);
+    // }
     
     if (!Start || Stop)
     {
@@ -718,7 +722,7 @@ void LineFollower_s::computeControl(absolute_time_t _TimeNow)
         return;
     }
     float SPA, SPB;
-    bool DoProportional = false;
+    float BaseSpeed, SteeringOffset, SteeringGain, CruiseGain;
 
     if (!Detected)
     {
@@ -726,29 +730,19 @@ void LineFollower_s::computeControl(absolute_time_t _TimeNow)
         switch (Turn)
         {
         case LineSensor_s::LineTurn_t::LINE_NO_TURN:
-            DoProportional = true;
+            SteeringGain = Config.SteeringGain2;
+            CruiseGain = Config.CruiseGain2;
             break;
         case LineSensor_s::LineTurn_t::LINE_TURN_LEFT:
-            DoProportional = true;
-            //SPA =  1.0f;
-            //SPB = -1.0f;
-            break;
         case LineSensor_s::LineTurn_t::LINE_TURN_RIGHT:
-            DoProportional = true;
-            //SPA = -1.0f;
-            //SPB =  1.0f;
+            SteeringGain = Config.SteeringGain3;
+            CruiseGain = Config.CruiseGain3;
             break;
         }
     }
     else 
     {
-       DoProportional = true; 
-    }
-
-    if (DoProportional)
-    {
         //we see the line
-        float BaseSpeed, SteeringOffset, SteeringGain, CruiseGain;
         switch (Range)
         {
         case LineSensor_s::LineRange_t::LINE_CENTER: //Do proportional, straight following
@@ -762,12 +756,7 @@ void LineFollower_s::computeControl(absolute_time_t _TimeNow)
             break;
         }
 
-        SteeringOffset = -std::clamp(LineHeading * Config.SteeringGain, -1.0f, 1.0f);
-        BaseSpeed = std::abs(LineHeading) < LINE_SENSOR_STEP_VALUE ? Config.ForwardSpeed : Config.ForwardSpeed - std::min(std::abs(LineHeading) * Config.CruiseGain, 2.0f);
         
-        SPA = std::clamp(SteeringOffset >= 0.0f ? BaseSpeed : BaseSpeed + SteeringOffset, -1.0f, 1.0f);
-        SPB = std::clamp(SteeringOffset <= 0.0f ? BaseSpeed : BaseSpeed - SteeringOffset, -1.0f, 1.0f);
-
         // if (to_us_since_boot(get_absolute_time()) > to_us_since_boot(PrintTime))
         // {
         //     //printf("LH: %f \n", LineHeading);
@@ -780,10 +769,11 @@ void LineFollower_s::computeControl(absolute_time_t _TimeNow)
         // }
     }
     
+    SteeringOffset = -std::clamp(LineHeading * SteeringGain, -2.0f, 2.0f);
+    BaseSpeed = std::abs(LineHeading) < LINE_SENSOR_STEP_VALUE ? Config.ForwardSpeed : Config.ForwardSpeed - std::min(std::abs(LineHeading) * CruiseGain, 2.0f);
     
-
-    
-    
+    SPA = std::clamp(SteeringOffset >= 0.0f ? BaseSpeed : BaseSpeed + SteeringOffset, -2.0f, 2.0f);
+    SPB = std::clamp(SteeringOffset <= 0.0f ? BaseSpeed : BaseSpeed - SteeringOffset, -2.0f, 2.0f);
     
     PID_DriveA.setSetPoint(-SPA);//invert rigth motor
     PID_DriveB.setSetPoint(SPB);

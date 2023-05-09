@@ -56,6 +56,8 @@ class LineFollower_s
         VAR_STEERING_GAIN2                = 0x0103,
         VAR_CRUISE_GAIN                   = 0x0104,
         VAR_CRUISE_GAIN2                  = 0x0105,
+        VAR_STEERING_GAIN3                = 0x0106,
+        VAR_CRUISE_GAIN3                  = 0x0107,
         /*  IMU variables                 = 0x0200,*/
         /*  Line variables                = 0x0220,*/
         VAR_LINE_EMITTER_POWER            = 0x0220,
@@ -105,6 +107,8 @@ class LineFollower_s
         float CruiseGain;
         float SteeringGain2;
         float CruiseGain2;
+        float SteeringGain3;
+        float CruiseGain3;
         uint32_t LockCode;
         void setLockCode(uint32_t _LockCode) { LockCode = _LockCode; }
         uint32_t getLockCode() { return LockCode; }
@@ -140,55 +144,55 @@ public:
 
     void motorControl(absolute_time_t _TimeNow);
 
-    #define xs(x) __XSTRING(x)
+    // #define xs(x) __XSTRING(x)
 
-    #define STRINGIFY_IMPL(s) #s
-    #define STRINGIFY(s) STRINGIFY_IMPL(s)
-    #define ARG1_IMPL(a, ...) a
-    #define ARG1(...) ARG1_IMPL(__VA_ARGS__, 0)
-    #define DumpStr(...) DumpString(STRINGIFY(ARG1(__VA_ARGS__)),__VA_ARGS__)
+    // #define STRINGIFY_IMPL(s) #s
+    // #define STRINGIFY(s) STRINGIFY_IMPL(s)
+    // #define ARG1_IMPL(a, ...) a
+    // #define ARG1(...) ARG1_IMPL(__VA_ARGS__, 0)
+    // #define DumpStr(...) DumpString(STRINGIFY(ARG1(__VA_ARGS__)),__VA_ARGS__)
     
-    void DumpString(const char* varname, char* var, int optionalvar=0) {
-        printf("%s : '%s'\n", varname, var);
-        printf("blah: %d", optionalvar);
-    }
+    // void DumpString(const char* varname, char* var, int optionalvar=0) {
+    //     printf("%s : '%s'\n", varname, var);
+    //     printf("blah: %d", optionalvar);
+    // }
 
-    int rangeAdd(char * File, const char * VarName, uint VarId, const char * Min, const char * Max, const char * Step)
-    {
-        return sprintf(File, "<div class=\"range-wrap\" id=\"%X\">"
-                             "<span class =\"label\">%s</span>"
-		                     "<input type=\"range\" class=\"range\" min=\"%s\" max=\"%s\" value=\"0\" step=\"%s\">"
-		                     "<output class=\"bubble\">"
-                             "</output></div>",
-                             VarId, VarName, Min, Max, Step);
-    }
+    // int rangeAdd(char * File, const char * VarName, uint VarId, const char * Min, const char * Max, const char * Step)
+    // {
+    //     return sprintf(File, "<div class=\"range-wrap\" id=\"%X\">"
+    //                          "<span class =\"label\">%s</span>"
+	// 	                     "<input type=\"range\" class=\"range\" min=\"%s\" max=\"%s\" value=\"0\" step=\"%s\">"
+	// 	                     "<output class=\"bubble\">"
+    //                          "</output></div>",
+    //                          VarId, VarName, Min, Max, Step);
+    // }
 
-    #define RANGE_ADD(File, VarName, Min, Max, Step) sprintf(File, "<div class=\"range-wrap\" id=\"%X\">"\
-                                                                   "<span class =\"label\">" xs(VarName) "</span>"\
-                                                                   "<input type=\"range\" class=\"range\" min=\"" xs(Min) "\" max=\"" xs(Max) "\" value=\"0\" step=\"" xs(Step) "\">"\
-                                                                   "<output class=\"bubble\">"\
-                                                                   "</output></div>", VarName)
+    // #define RANGE_ADD(File, VarName, Min, Max, Step) sprintf(File, "<div class=\"range-wrap\" id=\"%X\">"\
+    //                                                                "<span class =\"label\">" xs(VarName) "</span>"\
+    //                                                                "<input type=\"range\" class=\"range\" min=\"" xs(Min) "\" max=\"" xs(Max) "\" value=\"0\" step=\"" xs(Step) "\">"\
+    //                                                                "<output class=\"bubble\">"\
+    //                                                                "</output></div>", VarName)
 
     //#define RANGE_STRING()
 
-    int tabBegin(char * File, const char * TabName)
-    {
-        return sprintf(File, "<div id=\"%s\" class=\"tabcontent\">", TabName);
-    }
+    // int tabBegin(char * File, const char * TabName)
+    // {
+    //     return sprintf(File, "<div id=\"%s\" class=\"tabcontent\">", TabName);
+    // }
 
-    int tabEnd(char * File)
-    {
-        return sprintf(File, "</div>");
-    }
+    // int tabEnd(char * File)
+    // {
+    //     return sprintf(File, "</div>");
+    // }
 
-    void interfaceFileConstruct()
-    {
-        char buffer[255];
-        //tabBegin(buffer, "PID0");
-        RANGE_ADD(buffer, 0, 0, 1, 0.001);
-        //rangeAdd(buffer, __XSTRING(VAR_PID0_SETPOINT), VAR_PID0_SETPOINT, "0", "1", "0.001");
-        tabEnd(buffer);
-    }
+    // void interfaceFileConstruct()
+    // {
+    //     char buffer[255];
+    //     //tabBegin(buffer, "PID0");
+    //     RANGE_ADD(buffer, 0, 0, 1, 0.001);
+    //     //rangeAdd(buffer, __XSTRING(VAR_PID0_SETPOINT), VAR_PID0_SETPOINT, "0", "1", "0.001");
+    //     tabEnd(buffer);
+    // }
     // constexpr auto ccatc(std::string, const char s2[])
     // {
     //     return cat;

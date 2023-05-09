@@ -306,9 +306,9 @@ std::tuple<float, bool> LineSensor_s::compute(absolute_time_t _TimeNow, std::arr
             else
                 OffsetAverage *= LINE_SENSOR_OFFSET_DECAY_COEF;
 
-            if (OffsetAverage < -(LINE_SENSOR_STEP_VALUE + LINE_SENSOR_STEP_VALUE * 0.1f))
+            if (OffsetAverage < -(LINE_SENSOR_STEP_VALUE * 0.9f))
                 LineTurn = LINE_TURN_LEFT;
-            else if (OffsetAverage > (LINE_SENSOR_STEP_VALUE + LINE_SENSOR_STEP_VALUE * 0.1f))
+            else if (OffsetAverage > (LINE_SENSOR_STEP_VALUE * 0.9f))
                 LineTurn = LINE_TURN_RIGHT;
             else
                 LineTurn = LINE_NO_TURN;
