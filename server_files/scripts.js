@@ -3,39 +3,39 @@ function loadValues(){
 	var xh = new XMLHttpRequest();
 	xh.onreadystatechange = function(){
 		if (xh.readyState == 4 && xh.status == 200){
-		var res = JSON.parse(xh.responseText);
-		Object.entries(res).forEach((entry) => {
-			const [id, value] = entry;
-			const wrap = document.getElementById(id);
-			if (wrap !== null) {
-				const range = wrap.querySelector(".range");
-				const bubble = wrap.querySelector(".bubble");
-				if (range !== null || bubble !== null) {
-					range.value = value;
-					setBubble(range, bubble);
-				}
-			}
-			else
-			{
-				const but = document.getElementById(id+":v");
-				if (but !== null)
-				{
-					if (value > 0) {
-						but.style.backgroundColor = "green";
+			var res = JSON.parse(xh.responseText);
+			Object.entries(res).forEach((entry) => {
+				const [id, value] = entry;
+				const wrap = document.getElementById(id);
+				if (wrap !== null) {
+					const range = wrap.querySelector(".range");
+					const bubble = wrap.querySelector(".bubble");
+					if (range !== null || bubble !== null) {
+						range.value = value;
+						setBubble(range, bubble);
 					}
-					if (value <= 0) {
-						but.style.backgroundColor = "red";
-					}	
 				}
 				else
 				{
-					const butb = document.getElementById(id+":"+"value");
-					if (but !== null) {
-						butb.style.backgroundColor = "green";
+					const but = document.getElementById(id+":v");
+					if (but !== null)
+					{
+						if (value > 0) {
+							but.style.backgroundColor = "green";
+						}
+						if (value <= 0) {
+							but.style.backgroundColor = "red";
+						}	
+					}
+					else
+					{
+						const butb = document.getElementById(id+":"+"value");
+						if (but !== null) {
+							butb.style.backgroundColor = "green";
+						}
 					}
 				}
-			}
-		});
+			});
 		}
 	};
 	xh.addEventListener('error', (event) => { alert('Unable to get data!'); });
@@ -47,39 +47,40 @@ function loadCmds(){
 	var xh = new XMLHttpRequest();
 	xh.onreadystatechange = function(){
 		if (xh.readyState == 4 && xh.status == 200){
-		var res = JSON.parse(xh.responseText);
-		Object.entries(res).forEach((entry) => {
-			const [id, value] = entry;
-			const wrap = document.getElementById(id);
-			if (wrap !== null) {
-				const range = wrap.querySelector(".range");
-				const bubble = wrap.querySelector(".bubble");
-				if (range !== null || bubble !== null) {
-					range.value = value;
-					setBubble(range, bubble);
-				}
-			}
-			else
-			{
-				const but = document.getElementById(id+":v");
-				if (but !== null)
-				{
-					if (value > 0) {
-						but.style.backgroundColor = "green";
+			var res = JSON.parse(xh.responseText);
+			Object.entries(res).forEach((entry) => {
+				const [id, value] = entry;
+				const wrap = document.getElementById(id);
+				if (wrap !== null) {
+					const range = wrap.querySelector(".range");
+					const bubble = wrap.querySelector(".bubble");
+					if (range !== null || bubble !== null) {
+						range.value = value;
+						setBubble(range, bubble);
 					}
-					if (value <= 0) {
-						but.style.backgroundColor = "red";
-					}	
 				}
 				else
 				{
-					const butb = document.getElementById(id+":"+"value");
-					if (but !== null) {
-						butb.style.backgroundColor = "green";
+					const but = document.getElementById(id+":v");
+					if (but !== null)
+					{
+						if (value > 0) {
+							but.style.backgroundColor = "green";
+						}
+						if (value <= 0) {
+							but.style.backgroundColor = "red";
+						}	
+					}
+					else
+					{
+						const butb = document.getElementById(id+":"+"value");
+						if (but !== null) {
+							butb.style.backgroundColor = "green";
+						}
 					}
 				}
-			}
-		});
+			});
+			setTimeout(loadCmds, 2800);
 		}
 	};
 	xh.addEventListener('error', (event) => { alert('Unable to get data!'); });
@@ -165,19 +166,54 @@ function updateVar(id, val) {
 	XHR.send(null);
 }
 
+var Socket;
+
+function wsstart() {
+	//Socket = new WebSocket('ws://'+ '192.168.0.10' + ':81/', ['arduino']);
+	Socket = new WebSocket('ws://'+ location.hostname + ':81/', ['arduino']);
+	Socket.onopen = function () {
+		console.log('WebSocket Connected');
+	};
+	Socket.onerror = function (error) {
+		console.log('WebSocket Error ', error);
+	};
+	Socket.onmessage = function (e) {
+		console.log(e.data);
+	};
+	Socket.onclose = function(){
+		console.log('WebSocket connection closed');
+	};
+}
+
 function onBodyLoad(){
 	const allRanges = document.querySelectorAll(".range-wrap");
 	allRanges.forEach(wrap => {
 		const range = wrap.querySelector(".range");
 		const bubble = wrap.querySelector(".bubble");
+		const btns = wrap.querySelectorAll(".btnpm");
 		
 		range.addEventListener("input", () => {
 			setBubble(range, bubble);
 			updateVar(range.parentNode.id, range.value);
 		});
+		
+		btns.forEach(btn => {
+			btn.addEventListener("click", () => {
+				var newVal = Number(range.value) + Number(btn.innerHTML);
+				range.value = newVal;
+				setBubble(range, bubble);
+				updateVar(range.parentNode.id, range.value);
+			});
+		});
+
+		
 		setBubble(range, bubble);
 	});
+
+	
 	loadValues();
+	wsstart();
+	setTimeout(loadCmds, 1000);
 }
 
 function switchTab(evt, TabName) {

@@ -1,10 +1,43 @@
 body {background-color: #202124;}
 
+* {
+box-sizing: border-box;
+}
+.column {
+float: left;
+padding: 0;
+}
+
+.left {
+width: 40%;
+}
+
+.middle {
+width: 20%;
+padding: 11px;
+}
+
+.right {
+width: 40%;
+}
+
+.row:after {
+content: "";
+display: table;
+clear: both;
+}
+
 .range-wrap {
 padding-top: 15px; padding-bottom: 40px;
 position: relative;
 margin: 0 auto;
 width: 90%;
+}
+
+.range-wrap:after {
+content: "";
+display: table;
+clear: both;
 }
 
 .range {
@@ -84,5 +117,10 @@ display: none;
 padding: 6px 6px;
 border: 1px solid Teal;
 border-top: none;
+}
+
+.btnpm {
+width: 60px;
+height: 40px;
 }
 

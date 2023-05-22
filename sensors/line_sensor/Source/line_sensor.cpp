@@ -80,6 +80,13 @@ int LineSensor_s::init(line_sesnor_hw_inst_t *_hw_inst) {
     OffsetAverage = 0.0f;
     LastFrameHeading = 0.0f;
     LineHeading = 0.0f;
+    OffsetDecayCoef = LINE_SENSOR_OFFSET_DECAY_COEF;
+    AverageDecayCoef = LINE_SENSOR_POS_AVG_DECAY_COEF;
+    AnalogWidth = LINE_SENSOR_ANALOG_WIDTH;
+    OffsetThreshold = LINE_SENSOR_OFFSET_THRESHOLD;
+    LeftThreshold  = LINE_SENSOR_CENTER_INDEX + (LINE_SENSOR_ANALOG_WIDTH / 2);
+    RightThreshold = LINE_SENSOR_CENTER_INDEX - (LINE_SENSOR_ANALOG_WIDTH / 2);
+    CenterTimeout = LINE_SENSOR_CENTERLINE_TIMEOUT_US;
     CenterLineIndex = LINE_SENSOR_CENTER_INDEX;
     Calibrated = false;
     Detected = false;
@@ -105,6 +112,27 @@ int LineSensor_s::init(line_sesnor_hw_inst_t *_hw_inst) {
     setTurnGain2(1.0f);
 
     return LINE_SENSOR_OK;
+}
+
+void LineSensor_s::reset() {
+    Position = 0.0f;
+    PositionAverage = 0.0f;
+    OffsetAverage = 0.0f;
+    LastFrameHeading = 0.0f;
+    LineHeading = 0.0f;
+    CenterLineIndex = LINE_SENSOR_CENTER_INDEX;
+    Detected = false;
+    SensorTimedOut = false;
+    Available = false;
+    DisplayAnalog = false;
+    LiveUpdate = false;
+    LineRange = LINE_CENTER;
+    LineTurn = LINE_NO_TURN;
+
+    LedUpdateTimeout = get_absolute_time();
+    LedBlinkTimeout = get_absolute_time();
+    CalibrationTimeout = get_absolute_time();
+    SensorTimeout = get_absolute_time();
 }
 
 void LineSensor_s::setEmittersEnable(bool _Enabled)
@@ -182,8 +210,20 @@ void LineSensor_s::startCalibration()
     Calibrated = false;
 }
 
-void LineSensor_s::start(void) { line_sensor_hw_start_read(); }
-void LineSensor_s::stop(void) { line_sensor_hw_stop_read(); }
+void LineSensor_s::start(void)
+{
+    setEmittersEnable(true);
+    setLedsEnable(true);
+    reset();
+    line_sensor_hw_start_read();
+
+}
+void LineSensor_s::stop(void)
+{
+    setEmittersEnable(false);
+    setLedsEnable(false);
+    line_sensor_hw_stop_read();
+}
 
 bool LineSensor_s::process(absolute_time_t _TimeNow)
 {
@@ -200,6 +240,11 @@ bool LineSensor_s::process(absolute_time_t _TimeNow)
     
     std::tie(Position, Detected) = compute(_TimeNow, buffer);
     return true;
+}
+
+std::tuple<float, bool> LineSensor_s::getLineData()
+{
+    Available = false;
 }
 
 std::tuple<float, bool> LineSensor_s::compute(absolute_time_t _TimeNow, std::array<uint, LINE_SENSOR_NUM_SENSORS> & _input)
@@ -236,26 +281,30 @@ std::tuple<float, bool> LineSensor_s::compute(absolute_time_t _TimeNow, std::arr
     if (_EdgeDetected)
     {
         if ((Detected && (!_CenterDetected || _TimedOut) && !_TurnDeteced) ||
-            (!Detected && ( _CenterDetected || _InRange )))
+            (!Detected && ( _CenterDetected || (_InRange && !_TurnDeteced) )))
         {
             if (Detected && CenterLineIndex == _ClosestEdge && _TimedOut && _CenterDetected)
             {
-                CenterLineIndex = CenterLineIndex < LINE_SENSOR_CENTER_INDEX ? CenterLineIndex + 1 :
-                                  CenterLineIndex > LINE_SENSOR_CENTER_INDEX ? CenterLineIndex - 1 :
-                                  LINE_SENSOR_CENTER_INDEX;
+                auto cx =   CenterLineIndex < LINE_SENSOR_CENTER_INDEX ? CenterLineIndex + 1 :
+                            CenterLineIndex > LINE_SENSOR_CENTER_INDEX ? CenterLineIndex - 1 :
+                            LINE_SENSOR_CENTER_INDEX;
+                if (Sensors[cx].getDetected())
+                    CenterLineIndex = cx;
+                else
+                    CenterLineIndex = _ClosestEdge;
             }
             else
             {
                 CenterLineIndex = _ClosestEdge;
             }
-            CenterLineTimeout = delayed_by_us(_TimeNow, LINE_SENSOR_CENTERLINE_TIMEOUT_US);
+            CenterLineTimeout = delayed_by_us(_TimeNow, CenterTimeout);
             _CenterDetected = true;
 
-            if (CenterLineIndex < LINE_SENSOR_INDEX_RIGHT_TH)
+            if (CenterLineIndex < RightThreshold)
             {
                 LineRange = LINE_RIGHT;
             }
-            else if (CenterLineIndex > LINE_SENSOR_INDEX_LEFT_TH)
+            else if (CenterLineIndex > LeftThreshold)
             {
                 LineRange = LINE_LEFT;
             }
@@ -269,8 +318,8 @@ std::tuple<float, bool> LineSensor_s::compute(absolute_time_t _TimeNow, std::arr
 
         if (_Detected && _CenterDetected)
         {
-            int AnalogLineStart = std::max(CenterLineIndex - LINE_SENSOR_ANALOG_WIDTH / 2, LINE_SENSOR_FIRST_INDEX);
-            int AnalogLineEnd = std::min(CenterLineIndex + LINE_SENSOR_ANALOG_WIDTH / 2, LINE_SENSOR_LAST_INDEX);
+            int AnalogLineStart = std::max(CenterLineIndex - AnalogWidth / 2, LINE_SENSOR_FIRST_INDEX);
+            int AnalogLineEnd = std::min(CenterLineIndex + AnalogWidth / 2, LINE_SENSOR_LAST_INDEX);
             float AnalogLinePosition = 0.0f;
             float AnalogLineDev = 0.0f;
 
@@ -296,15 +345,15 @@ std::tuple<float, bool> LineSensor_s::compute(absolute_time_t _TimeNow, std::arr
 
             OffsetDifference = OffsetCenterLow - OffsetCenterHigh;
 
-            if (OffsetAverage < LINE_SENSOR_STEP_VALUE / 2.0f && OffsetAverage > -LINE_SENSOR_STEP_VALUE / 2.0f)
-                OffsetAverage = 0.0f;
-
-            if (OffsetDifference > LINE_SENSOR_OFFSET_THRESHOLD)
+            if (OffsetDifference > OffsetThreshold)
                 OffsetAverage += LINE_SENSOR_STEP_VALUE;
-            else if (OffsetDifference < -LINE_SENSOR_OFFSET_THRESHOLD)
+            else if (OffsetDifference < -OffsetThreshold)
                 OffsetAverage -= LINE_SENSOR_STEP_VALUE;
             else
-                OffsetAverage *= LINE_SENSOR_OFFSET_DECAY_COEF;
+                OffsetAverage *= OffsetDecayCoef;
+
+            if (OffsetAverage < LINE_SENSOR_STEP_VALUE / 2.0f && OffsetAverage > -LINE_SENSOR_STEP_VALUE / 2.0f)
+                OffsetAverage = 0.0f;
 
             if (OffsetAverage < -(LINE_SENSOR_STEP_VALUE * 0.9f))
                 LineTurn = LINE_TURN_LEFT;
@@ -312,11 +361,14 @@ std::tuple<float, bool> LineSensor_s::compute(absolute_time_t _TimeNow, std::arr
                 LineTurn = LINE_TURN_RIGHT;
             else
                 LineTurn = LINE_NO_TURN;
+                
 
             // if (LineTurn != LINE_NO_TURN)
             //     TLock = true;
 
             _Position = AnalogLinePosition;
+
+            PositionAverage = PositionAverage * (1.0f - AverageDecayCoef) + _Position * AverageDecayCoef;
 
             // if (to_us_since_boot(get_absolute_time()) > to_us_since_boot(DBG_PrintTimeout) || !Detected)
             // {
@@ -333,6 +385,19 @@ std::tuple<float, bool> LineSensor_s::compute(absolute_time_t _TimeNow, std::arr
             //     DBG_PrintTimeout = make_timeout_time_ms(200);
             // }
         }
+        else if (_Detected)
+        {
+            // OffsetAverage *= OffsetDecayCoef;
+            // if (OffsetAverage < LINE_SENSOR_STEP_VALUE / 2.0f && OffsetAverage > -LINE_SENSOR_STEP_VALUE / 2.0f)
+            //     OffsetAverage = 0.0f;
+
+            if (OffsetAverage < -(LINE_SENSOR_STEP_VALUE * 0.9f))
+                LineTurn = LINE_TURN_LEFT;
+            else if (OffsetAverage > (LINE_SENSOR_STEP_VALUE * 0.9f))
+                LineTurn = LINE_TURN_RIGHT;
+            else
+                LineTurn = LINE_NO_TURN;
+        }
     }
     else
     {
@@ -342,13 +407,24 @@ std::tuple<float, bool> LineSensor_s::compute(absolute_time_t _TimeNow, std::arr
             switch (LineRange)
             {
             case LINE_CENTER:
-                _Position = Position;
+                if(PositionAverage > 0)
+                {
+                    _Position =  LINE_SENSOR_EDGE_VALUE;
+                    CenterLineIndex = LINE_SENSOR_FIRST_INDEX;
+                }
+                else
+                {
+                    _Position = -LINE_SENSOR_EDGE_VALUE;
+                    CenterLineIndex = LINE_SENSOR_LAST_INDEX;
+                }
                 break;
             case LINE_LEFT:
                 _Position = -LINE_SENSOR_EDGE_VALUE;
+                CenterLineIndex = LINE_SENSOR_LAST_INDEX;
                 break;
             case LINE_RIGHT:
                 _Position =  LINE_SENSOR_EDGE_VALUE;
+                CenterLineIndex = LINE_SENSOR_FIRST_INDEX;
                 break;
             }
             break;
@@ -364,8 +440,8 @@ std::tuple<float, bool> LineSensor_s::compute(absolute_time_t _TimeNow, std::arr
             break;
         }
 
-        OffsetAverage *= LINE_SENSOR_OFFSET_DECAY_COEF;
-        CenterLineTimeout = delayed_by_us(_TimeNow, LINE_SENSOR_CENTERLINE_TIMEOUT_US);
+        OffsetAverage *= OffsetDecayCoef;
+        CenterLineTimeout = delayed_by_us(_TimeNow, CenterTimeout);
         //TLock = false;
         _Detected = false;
         // if (to_us_since_boot(get_absolute_time()) > to_us_since_boot(DBG_PrintTimeout) || Detected)
@@ -413,23 +489,32 @@ float LineSensor_s::computeLineHeading(float _FrameHeading)
         }
         else if (Position < (LINE_SENSOR_TURN90_VALUE - LINE_SENSOR_STEP_VALUE / 2) && Position > -(LINE_SENSOR_TURN90_VALUE - LINE_SENSOR_STEP_VALUE / 2))
         {
-            
             //off edge
             if (Position > 0.0f)
-                LineHeading = std::clamp(HeadingChange + LINE_SENSOR_EDGE_VALUE * TurnGain1, LINE_SENSOR_EDGE_VALUE/2, LINE_SENSOR_TURN90_VALUE);
+                LineHeading = std::clamp(HeadingChange + Position * TurnGain1, LINE_SENSOR_EDGE_VALUE, LINE_SENSOR_TURN90_VALUE);
             else
-                LineHeading = std::clamp(HeadingChange - LINE_SENSOR_EDGE_VALUE * TurnGain1, -LINE_SENSOR_TURN90_VALUE, -LINE_SENSOR_EDGE_VALUE/2);
+                LineHeading = std::clamp(HeadingChange + Position * TurnGain1, -LINE_SENSOR_TURN90_VALUE, -LINE_SENSOR_EDGE_VALUE);
         }
         else
         {
             //90*
             if (Position > 0.0f)
-                LineHeading = std::clamp(HeadingChange + LINE_SENSOR_TURN90_VALUE * TurnGain2, LINE_SENSOR_EDGE_VALUE, LINE_SENSOR_TURN90_VALUE);
+                LineHeading = std::clamp(HeadingChange + Position * TurnGain2, LINE_SENSOR_EDGE_VALUE, LINE_SENSOR_TURN90_VALUE);
             else
-                LineHeading = std::clamp(HeadingChange - LINE_SENSOR_TURN90_VALUE * TurnGain2, -LINE_SENSOR_TURN90_VALUE, -LINE_SENSOR_EDGE_VALUE);
+                LineHeading = std::clamp(HeadingChange + Position * TurnGain2, -LINE_SENSOR_TURN90_VALUE, -LINE_SENSOR_EDGE_VALUE);
         }
-        
+        // if (to_us_since_boot(get_absolute_time()) > to_us_since_boot(DBG_PrintTimeout))
+        // {
+        //     printf("LH: %f , %f , %f\n", Position, LineHeading, HeadingChange);
+        //     //printf("A: %f, B: %f\n", DriveA.getDuty(), DriveB.getDuty());
+        //     //printf("M1 %d, % .3f rpm, M2 %d, % .3f rpm, % .9f\n", Steps1, RPM1, Steps2, RPM2, PID_DriveB.getIntg());
+        //     //printf("%f, %f, %f, %f, %d, %d\n", Speed0, TargetSpeed0, Speed1, TargetSpeed1, Encoder1_err, Encoder2_err);
+        //     //printf("%f, %f, %f, %f\n",SpeedA,SpeedB,SPA,SPB);
+        //     //printf("sB:%f sA:%f BS:%f, SO:%f, oB:%f, oA:%f, vB:%f, vA:%f, M+:%f, M-:%f, iB:%f, iA:%f, pB:%f, pA:%f\n", SpeedA, SpeedB, BaseSpeed, SteeringOffset, OffsetB, OffsetA, OverdriveB, OverdriveA, OffsetMaxPos, OffsetMaxNeg, PID_DriveB.getIntegral(), PID_DriveA.getIntegral(), DriveB.getDuty(), DriveA.getDuty());
+        //     DBG_PrintTimeout = make_timeout_time_ms(200);
+        // }
     }
+    
 
     return LineHeading;
 }
@@ -449,8 +534,22 @@ void LineSensor_s::updateLeds(absolute_time_t _TimeNow)
     {
         for(auto i = 0; i < LINE_SENSOR_NUM_SENSORS; i++)
             Sensors[i].setLedPower(0U);
-        if (Detected)
-            Sensors[CenterLineIndex].setLedPower(LedBrightness);
+        if (LineTurn != LINE_NO_TURN)
+        {
+            auto br = LedBrightness * 0.5f;
+            if (CenterLineIndex > LINE_SENSOR_CENTER_INDEX)
+            {
+                for(auto i = CenterLineIndex; i > LINE_SENSOR_CENTER_INDEX; i--)
+                    Sensors[i].setLedPower(br);
+            }
+            else if (CenterLineIndex < LINE_SENSOR_CENTER_INDEX)
+            {
+                for(auto i = CenterLineIndex; i < LINE_SENSOR_CENTER_INDEX; i++)
+                    Sensors[i].setLedPower(br);
+            }
+            
+        }
+        Sensors[CenterLineIndex].setLedPower(LedBrightness);
     }
 
     line_sensor_hw_set_led_power_pwm(hw_inst, LINE_SENSOR_EDGE_LED_FIRST, 0U);
@@ -485,6 +584,13 @@ void LineSensor_s::loadConfiguration(Config_t _Config)
     setLedsBrightness(_Config.LedBrightness);
     setTurnGain1(_Config.TurnGain1);
     setTurnGain2(_Config.TurnGain2);
+    setOffsetDecayCoef(_Config.OffsetDecayCoef);
+    setAverageDecayCoef(_Config.AverageDecayCoef);
+    setAnalogWidth(_Config.AnalogWidth);
+    setOffsetThreshold(_Config.OffsetThreshold);
+    setLeftThreshold(_Config.LeftThreshold);
+    setRightThreshold(_Config.RightThreshold);
+    setCenterTimeout(_Config.CenterTimeout);
 
     Calibrated = _Config.Calibrated;
 
@@ -502,6 +608,13 @@ LineSensor_s::Config_t LineSensor_s::getConfiguration(void)
         .LedBrightness = getLedsBrightness(),
         .TurnGain1 = getTurnGain1(),
         .TurnGain2 = getTurnGain2(),
+        .OffsetDecayCoef = getOffsetDecayCoef(),
+        .AverageDecayCoef = getAverageDecayCoef(),
+        .AnalogWidth = getAnalogWidth(),
+        .OffsetThreshold = getOffsetThreshold(),
+        .LeftThreshold = getLeftThreshold(),
+        .RightThreshold = getRightThreshold(),
+        .CenterTimeout = getCenterTimeout(),
         .Calibrated = Calibrated,
     };
 

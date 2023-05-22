@@ -101,12 +101,12 @@ static inline void line_sensor_hw_led_update(line_sesnor_hw_inst_t *inst)
 
 static inline void line_sensor_hw_start_read()
 {
-    padc_start();
+    //padc_start();
 }
 
 static inline void line_sensor_hw_stop_read()
 {
-    padc_stop();
+    //padc_stop();
 }
 
 static inline bool line_sensor_hw_is_read_ongoing()
@@ -116,7 +116,7 @@ static inline bool line_sensor_hw_is_read_ongoing()
 
 static inline bool line_sensor_hw_is_new_data_available()
 {
-    return true;//padc_new_data_available();
+    return padc_new_data_available();
 }
 
 static inline void line_sensor_hw_read(uint _output[LINE_SENSOR_HW_NUM_SENSORS])

@@ -1,4 +1,4 @@
-add_executable(line_follower)
+add_executable(line_follower2)
 
 include_directories("${SDUINO_PROJECT_PATH}/eigen/Eigen")
 include_directories("${SDUINO_PROJECT_PATH}/eigen/Eigen/src")
@@ -20,14 +20,14 @@ include_directories("${SDUINO_PROJECT_PATH}/pid/Include")
 include_directories("${SDUINO_PROJECT_PATH}/nvm/Include")
 include_directories("${SDUINO_PROJECT_PATH}/interface/Include")
 
-target_compile_definitions(line_follower PUBLIC -DMOTORDEF0)
-target_compile_definitions(line_follower PUBLIC -DPORT_PI4MSD5V9540B)  # -D removed
+target_compile_definitions(line_follower2 PUBLIC -DMOTORDEF1)
+target_compile_definitions(line_follower2 PUBLIC -DPORT_PI4MSD5V9540B)  # -D removed
 #target_compile_definitions(line_follower PUBLIC -DIMU_USE_MAG)
-target_compile_definitions(line_follower PUBLIC -DINTERFACE_DEBUG)
+target_compile_definitions(line_follower2 PUBLIC -DINTERFACE_DEBUG)
 
-pico_generate_pio_header(line_follower ${SDUINO_PROJECT_PATH}/sensors/hardware/padc/Source/padc.pio)
+pico_generate_pio_header(line_follower2 ${SDUINO_PROJECT_PATH}/sensors/hardware/padc/Source/padc.pio)
 
-target_sources(line_follower PRIVATE
+target_sources(line_follower2 PRIVATE
     Source/main.cpp
     ../nvm/Source/nvm.cpp
     ../interface/Source/interface.cpp
@@ -55,7 +55,7 @@ target_sources(line_follower PRIVATE
     ../sensors/imu/Source/imu.cpp
 )
 
-target_link_libraries(line_follower 
+target_link_libraries(line_follower2 
                       pico_stdlib 
                       pico_multicore 
                       hardware_flash 
@@ -68,13 +68,13 @@ target_link_libraries(line_follower
                       hardware_adc 
                       pico_bootsel_via_double_reset)
 
-target_compile_definitions(line_follower PRIVATE
+target_compile_definitions(line_follower2 PRIVATE
     PICO_BOOTSEL_VIA_DOUBLE_RESET_ACTIVITY_LED=0
 )
 
 # enable usb output
-pico_enable_stdio_usb(line_follower 1)
-pico_enable_stdio_uart(line_follower 0)
+pico_enable_stdio_usb(line_follower2 1)
+pico_enable_stdio_uart(line_follower2 0)
 
 # create map/bin/hex/uf2 file etc.
-pico_add_extra_outputs(line_follower)
+pico_add_extra_outputs(line_follower2)

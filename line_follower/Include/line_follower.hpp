@@ -31,6 +31,19 @@ class LineFollower_s
     bool NVM_ERASE_OK = false;
     bool Start_ESC = false;
     bool Stop_ESC = false;
+    bool SleepAllowed = false;
+
+    int iX = 0;
+    int iY = 0;
+
+    float iX_f = 0.0f;
+    float iY_f = 0.0f;
+    float iYaw = 0.0f;
+
+    int iPulseR = 0;
+    int iPulseL = 0;
+    float iSpeedR = 0.0f;
+    float iSpeedL = 0.0f;
 
     enum InterfaceVariables{
     //HEX FORMAT 16bit
@@ -54,10 +67,17 @@ class LineFollower_s
         VAR_ESC_SPEED                     = 0x0101,
         VAR_STEERING_GAIN                 = 0x0102,
         VAR_STEERING_GAIN2                = 0x0103,
-        VAR_CRUISE_GAIN                   = 0x0104,
-        VAR_CRUISE_GAIN2                  = 0x0105,
-        VAR_STEERING_GAIN3                = 0x0106,
-        VAR_CRUISE_GAIN3                  = 0x0107,
+        VAR_STEERING_GAIN3                = 0x0104,
+        VAR_STEERING_GAIN4                = 0x0105,
+        VAR_STEERING_GAIN5                = 0x0106,
+        VAR_STEERING_GAIN6                = 0x0107,
+        VAR_CRUISE_GAIN                   = 0x0108,
+        VAR_CRUISE_GAIN2                  = 0x0109,
+        VAR_CRUISE_GAIN3                  = 0x010A,
+        VAR_CRUISE_GAIN4                  = 0x010B,
+        VAR_CRUISE_GAIN5                  = 0x010C,
+        VAR_CRUISE_GAIN6                  = 0x010D,
+        VAR_BRAKE_TIMEOUT                 = 0x010E,
         /*  IMU variables                 = 0x0200,*/
         /*  Line variables                = 0x0220,*/
         VAR_LINE_EMITTER_POWER            = 0x0220,
@@ -66,6 +86,13 @@ class LineFollower_s
         VAR_LINE_TURN_GAIN_2              = 0x0223,
         CMD_LINE_TOGGLE_DISPLAY           = 0x0224,
         CMD_LINE_TOGGLE_LIVE              = 0x0225,
+        VAR_LINE_OFFSET_DECAY             = 0x0226,
+        VAR_LINE_AVERAGE_DECAY            = 0x0227,
+        VAR_LINE_ANALOG_WIDTH             = 0x0228,
+        VAR_LINE_OFFSET_THRESHOLD         = 0x0229,
+        VAR_LINE_LEFT_THRESHOLD           = 0x022A,
+        VAR_LINE_RIGHT_THRESHOLD          = 0x022B,
+        VAR_LINE_CENTER_TIMEOUT           = 0x022C,
         /*  Drive variables               = 0x0240,*/
         VAR_DRIVE0_PWM_WRAP_VALUE         = 0x0240,
         VAR_DRIVE0_PWM_CLK_DIV            = 0x0241,
@@ -109,6 +136,13 @@ class LineFollower_s
         float CruiseGain2;
         float SteeringGain3;
         float CruiseGain3;
+        float SteeringGain4;
+        float CruiseGain4;
+        float SteeringGain5;
+        float CruiseGain5;
+        float SteeringGain6;
+        float CruiseGain6;
+        uint32_t BrakeTimeout;
         uint32_t LockCode;
         void setLockCode(uint32_t _LockCode) { LockCode = _LockCode; }
         uint32_t getLockCode() { return LockCode; }
@@ -116,6 +150,10 @@ class LineFollower_s
     absolute_time_t PrintTime;
     absolute_time_t SleepTime;
     absolute_time_t StartTime;
+    absolute_time_t BrakeTime;
+    bool ReturningOnLine = false;
+    bool BrakeStart = false;
+    bool BrakeEnd = false;
 public:
     Config_s Config;
 

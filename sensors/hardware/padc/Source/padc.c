@@ -106,7 +106,7 @@ bool padc_new_data_available()
 
 void padc_start()
 {
-    // padc_inst.Stop = false;
+    // padc_inst.Stop = true; //false
     // dma_channel_set_write_addr(PADC_DMA_CH, padc_inst.dma_buffer, true);
     // pio_set_irq0_source_enabled(PADC_PIO, pis_interrupt0, true);
     // irq_set_enabled(PIO0_IRQ_0, true);

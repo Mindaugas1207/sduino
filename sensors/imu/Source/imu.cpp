@@ -333,6 +333,16 @@ IMU_s::Config_t IMU_s::getConfiguration()
     return data;
 }
 
+void IMU_s::reset()
+{
+    if (FusionStarted)
+    {
+        Fusion.init();
+        FusionStarted = true;
+        LastTime = get_absolute_time();
+    }
+}
+
 void IMU_s::compute(bool _NewData, absolute_time_t _TimeNow)
 {
     //printf("Raw %f, %f, %f, %f, %f, %f, %f, %f, %f\n", Accelerometer.Raw.X, Accelerometer.Raw.Y, Accelerometer.Raw.Z, Gyroscope.Raw.X, Gyroscope.Raw.Y, Gyroscope.Raw.Z, Magnetometer.Raw.X, Magnetometer.Raw.Y, Magnetometer.Raw.Z);

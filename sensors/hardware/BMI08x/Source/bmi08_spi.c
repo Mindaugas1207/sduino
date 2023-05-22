@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include "bmi08_spi.h"
+#include <string.h>
 
 /******************************************************************************/
 /*!                       Macro definitions                                   */
@@ -125,11 +126,35 @@ int BMI088_init(BMI08x_inst_t *inst, port_spi_t *gyro_port, port_spi_t *accel_po
     return status;
 }
 
+void _bmi08a_get_synchronized_data(struct bmi08x_sensor_data *accel,
+                                    struct bmi08x_sensor_data *gyro,
+                                    struct bmi08x_dev *dev)
+{
+
+    uint8_t temp_buff[12];
+
+    port_spi_dev_t* intf = (port_spi_dev_t*)dev->intf_ptr_accel;
+    port_spi_read_mem(intf->port, intf->dev_num, BMI08X_REG_ACCEL_GP_0 | BMI08X_SPI_RD_MASK, temp_buff, 12);
+
+    accel->x = (int16_t)((temp_buff[2] << 8) | temp_buff[1]); /* Data in X axis */
+    accel->y = (int16_t)((temp_buff[4] << 8) | temp_buff[3]); /* Data in Y axis */
+    accel->z = (int16_t)((temp_buff[11] << 8) | temp_buff[10]); /* Data in Z axis */
+
+    intf = (port_spi_dev_t*)dev->intf_ptr_gyro;
+    port_spi_read_mem(intf->port, intf->dev_num, BMI08X_REG_GYRO_X_LSB | BMI08X_SPI_RD_MASK, temp_buff, 6);
+
+    gyro->x = (int16_t)((temp_buff[1] << 8) | temp_buff[0]); /* Data in X axis */
+    gyro->y = (int16_t)((temp_buff[3] << 8) | temp_buff[2]); /* Data in Y axis */
+    gyro->z = (int16_t)((temp_buff[5] << 8) | temp_buff[4]); /* Data in Z axis */
+}
+
 int BMI088_ReadData(BMI08x_inst_t *inst)
 {
-    int status = BMI08X_OK;
+    //int status = BMI08X_OK;
 
-    status |= bmi08a_get_synchronized_data(&inst->accel, &inst->gyro, &inst->device);
+    _bmi08a_get_synchronized_data(&inst->accel, &inst->gyro, &inst->device);
 
-    return status;
+    return BMI08X_OK;
 }
+
+

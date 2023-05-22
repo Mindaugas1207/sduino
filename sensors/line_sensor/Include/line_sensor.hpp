@@ -29,9 +29,6 @@
 #define LINE_SENSOR_STROBE_EMITER LINE_SENSOR_HW_STRB_CH
 #define LINE_SENSOR_STATUS_LED LINE_SENSOR_HW_STATUS_CH
 #define LINE_SENSOR_THRESHOLD_CLEARANCE 0.1f
-#define LINE_SENSOR_ANALOG_WIDTH 5
-#define LINE_SENSOR_OFFSET_DECAY_COEF 0.95f
-#define LINE_SENSOR_OFFSET_THRESHOLD 3
 #define LINE_SENSOR_LED_UPDATE_FREQUENCY 30
 #define LINE_SENSOR_LED_BLINK_FREQUENCY_CALIB 10
 #define LINE_SENSOR_CALIBRATION_TIME 3500
@@ -45,12 +42,19 @@
 #define LINE_SENSOR_LAST_ANGLE_RAD (LINE_SENSOR_LAST_VALUE * LINE_SENSOR_VALUE_TO_ANGLE_RAD)
 #define LINE_SENSOR_EDGE_ANGLE_RAD (LINE_SENSOR_EDGE_VALUE * LINE_SENSOR_VALUE_TO_ANGLE_RAD)
 #define LINE_SENSOR_TURN90_ANGLE_RAD ((float)(M_PI / 2))
-#define LINE_SENSOR_TURN90_VALUE (LINE_SENSOR_TURN90_ANGLE_RAD * LINE_SENSOR_ANGLE_RAD_TO_VALUE)
+#define LINE_SENSOR_TURN90_VALUE (LINE_SENSOR_LAST_VALUE * 5.0f)
+// (LINE_SENSOR_TURN90_ANGLE_RAD * LINE_SENSOR_ANGLE_RAD_TO_VALUE)
 
-#define LINE_SENSOR_CENTERLINE_TIMEOUT_US 1000
 
+
+
+#define LINE_SENSOR_ANALOG_WIDTH 5
+#define LINE_SENSOR_OFFSET_DECAY_COEF 0.6f
+#define LINE_SENSOR_POS_AVG_DECAY_COEF 0.6f
+#define LINE_SENSOR_OFFSET_THRESHOLD 3
 #define LINE_SENSOR_INDEX_LEFT_TH (LINE_SENSOR_CENTER_INDEX + (LINE_SENSOR_ANALOG_WIDTH / 2))
 #define LINE_SENSOR_INDEX_RIGHT_TH (LINE_SENSOR_CENTER_INDEX - (LINE_SENSOR_ANALOG_WIDTH / 2))
+#define LINE_SENSOR_CENTERLINE_TIMEOUT_US 1000
 
 #define LINE_SENSOR_OK PICO_OK
 #define LINE_SENSOR_ERROR PICO_ERROR_GENERIC
@@ -117,6 +121,13 @@ private:
         float LedBrightness;
         float TurnGain1;
         float TurnGain2;
+        float OffsetDecayCoef;
+        float AverageDecayCoef;
+        int AnalogWidth;
+        int OffsetThreshold;
+        int LeftThreshold;
+        int RightThreshold;
+        uint32_t CenterTimeout;
         bool Calibrated;
     };
 
@@ -129,6 +140,7 @@ private:
     absolute_time_t CenterLineTimeout;
 
     float Position;
+    float PositionAverage;
     float OffsetAverage;
     float EmittersPower;
     float LedBrightness;
@@ -137,6 +149,8 @@ private:
     float LastFrameHeading;
     float LineHeading;
     float ph;
+    float OffsetDecayCoef;
+    float AverageDecayCoef;
 
     float LineExpectedHeading;
     enum LineRange_e LineRange;
@@ -144,6 +158,11 @@ private:
     enum LineTurn_e LineTurn;
 
     int CenterLineIndex;
+    int AnalogWidth;
+    int OffsetThreshold;
+    int LeftThreshold;
+    int RightThreshold;
+    uint32_t CenterTimeout;
     bool TLock;
     bool Detected;
     bool SensorTimedOut;
@@ -159,6 +178,7 @@ public:
     typedef LineTurn_e LineTurn_t;
 
     int init(line_sesnor_hw_inst_t *_hw_inst);
+    void reset();
 
     bool isCalibrated(void) { return Calibrated; }
     bool available(void) { return Available; }
@@ -168,6 +188,21 @@ public:
     float getTurnGain1() { return TurnGain1; }
     void setTurnGain2(float _TurnGain2) { TurnGain2 = _TurnGain2; }
     float getTurnGain2() { return TurnGain2; }
+
+    void setOffsetDecayCoef(float _OffsetDecayCoef) { OffsetDecayCoef = _OffsetDecayCoef; }
+    float getOffsetDecayCoef() { return OffsetDecayCoef; }
+    void setAverageDecayCoef(float _AverageDecayCoef) { AverageDecayCoef = _AverageDecayCoef; }
+    float getAverageDecayCoef() { return AverageDecayCoef; }
+    void setAnalogWidth(int _AnalogWidth) { AnalogWidth = _AnalogWidth; }
+    int getAnalogWidth() { return AnalogWidth; }
+    void setOffsetThreshold(int _OffsetThreshold) { OffsetThreshold = _OffsetThreshold; }
+    int getOffsetThreshold() { return OffsetThreshold; }
+    void setLeftThreshold(int _LeftThreshold) { LeftThreshold = _LeftThreshold; }
+    int getLeftThreshold() { return LeftThreshold; }
+    void setRightThreshold(int _RightThreshold) { RightThreshold = _RightThreshold; }
+    int getRightThreshold() { return RightThreshold; }
+    void setCenterTimeout(uint32_t _CenterTimeout) { CenterTimeout = _CenterTimeout; }
+    uint32_t getCenterTimeout() { return CenterTimeout; }
 	
     void setEmittersEnable(bool _Enabled);
     void setEmittersPower(float _EmittersPower);
@@ -190,6 +225,7 @@ public:
     void stop(void);
     bool process(absolute_time_t _TimeNow);
 
+    std::tuple<float, bool> getLineData();
     std::tuple<float, bool> compute(absolute_time_t _TimeNow, std::array<uint, LINE_SENSOR_NUM_SENSORS> & _input);
     float computeLineHeading(float _FrameHeading);
     bool isDetected(void) {return Detected;};

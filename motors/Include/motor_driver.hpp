@@ -76,11 +76,13 @@ class ESC_s {
     uint PWM_PIN;
     uint PWM;
     float Speed;
+    float StartSpeed;
     uint PWM_Value;
     uint PWM_Value_Start;
     bool Enabled;
     bool SpinUp;
-    absolute_time_t SpinUpTime;
+    uint32_t SpinUpTime;
+    absolute_time_t SpinUpTimeStart;
 public:
     int init(uint _PWM_PIN);
     void setSpeed(float _Speed);

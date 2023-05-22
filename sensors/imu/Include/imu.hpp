@@ -20,7 +20,7 @@
 #include <limits>
 #include <tuple>
 #include <array>
-#include "Eigen/Dense"
+#include "Dense"
 #ifdef IMU_USE_MAG
 #define IMU_NDATA_CALIB 12
 #define IMU_NDATA 9
@@ -168,6 +168,7 @@ public:
     typedef Config_s Config_t;
 
     bool init(void *hw0_inst, void *hw1_inst);
+    void reset();
     void startCalibration();
     void biasCalibrationInit();
 #ifdef IMU_USE_MAG

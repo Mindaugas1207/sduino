@@ -63,7 +63,7 @@ void MotorDriver_s::setDuty(float _Duty)
     else Duty = 0.0f;
     int32_t pwm = Duty * PWM_WRAP_VALUE;
     int32_t max = PWM_WRAP_VALUE;
-
+#ifdef MOTORDEF0
     if (pwm > 0) {
         PWM1_Value = max;
         PWM2_Value = pwm > max ? 0 : max - pwm;
@@ -76,6 +76,21 @@ void MotorDriver_s::setDuty(float _Duty)
         PWM1_Value = max;
         PWM2_Value = max;
     }
+#endif
+#ifdef MOTORDEF1
+    if (pwm > 0) {
+        PWM1_Value = pwm > max ? max : pwm;
+        PWM2_Value = 0;
+    }
+    else if (pwm < 0) {
+        PWM1_Value = 0;
+        PWM2_Value = -pwm > max ? max : -pwm;
+    }
+    else {
+        PWM1_Value = 0;
+        PWM2_Value = 0;
+    }
+#endif
 }
 
 void MotorDriver_s::loadConfiguration(Config_t _Config)
@@ -112,8 +127,14 @@ void MotorDriver_s::stop()
     Duty = 0.0f;
     PWM1_Value = 0;
     PWM2_Value = 0;
+#ifdef MOTORDEF0
     pwm_set_gpio_level(PWM_PIN1, 0);
     pwm_set_gpio_level(PWM_PIN2, 0);
+#endif
+#ifdef MOTORDEF1
+    pwm_set_gpio_level(PWM_PIN1, 0);
+    pwm_set_gpio_level(PWM_PIN2, 0);
+#endif
 
     //pwm_set_enabled(PWM1, false);
     //pwm_set_enabled(PWM2, false);
@@ -127,6 +148,14 @@ void MotorDriver_s::brake()
     PWM2_Value = 0;
     pwm_set_gpio_level(PWM_PIN1, PWM_WRAP_VALUE);
     pwm_set_gpio_level(PWM_PIN2, PWM_WRAP_VALUE);
+#ifdef MOTORDEF0
+    pwm_set_gpio_level(PWM_PIN1, PWM_WRAP_VALUE);
+    pwm_set_gpio_level(PWM_PIN2, PWM_WRAP_VALUE);
+#endif
+#ifdef MOTORDEF1
+    pwm_set_gpio_level(PWM_PIN1, PWM_WRAP_VALUE);
+    pwm_set_gpio_level(PWM_PIN2, PWM_WRAP_VALUE);
+#endif
 
     //pwm_set_enabled(PWM1, false);
     //pwm_set_enabled(PWM2, false);
@@ -153,14 +182,15 @@ int ESC_s::init(uint _PWM_PIN)
     pwm_set_enabled(PWM, true);
     SpinUp = false;
     Enabled = false;
+    Speed = 0.0f;
+    StartSpeed = 0.0f;
+    SpinUpTime = 1;
     return true;
 }
 
 void ESC_s::setSpeed(float _Speed)
 {
-    int32_t pwm = (SERVO_PWM_MAX - SERVO_PWM_MIN) * _Speed + SERVO_PWM_MIN;
-    pwm = pwm > SERVO_PWM_MAX ? SERVO_PWM_MAX : (pwm < SERVO_PWM_MIN ? SERVO_PWM_MIN : pwm);
-    PWM_Value = pwm;
+    Speed = _Speed;
 }
 
 // void ESC_s::setAngle(float _Angle)
@@ -173,11 +203,10 @@ void ESC_s::setSpeed(float _Speed)
 void ESC_s::start(float _StartSpeed, int _SpintUpTime)
 {
     if (Enabled) return;
-    SpinUpTime = make_timeout_time_ms(_SpintUpTime);
+    SpinUpTimeStart = get_absolute_time();
+    SpinUpTime = _SpintUpTime;
     SpinUp = true;
-    int32_t pwm = (SERVO_PWM_MAX - SERVO_PWM_MIN) * _StartSpeed + SERVO_PWM_MIN;
-    pwm = pwm > SERVO_PWM_MAX ? SERVO_PWM_MAX : (pwm < SERVO_PWM_MIN ? SERVO_PWM_MIN : pwm);
-    PWM_Value_Start = pwm;
+    StartSpeed = _StartSpeed;
     Enabled = true;
 }
 
@@ -191,21 +220,31 @@ void ESC_s::process(absolute_time_t _TimeNow)
 {
     if (Enabled)
     {
+        float prop = 0.0f;
+
         if (SpinUp)
         {
-            if (to_us_since_boot(_TimeNow) > to_us_since_boot(SpinUpTime))
+            uint64_t diff = to_us_since_boot(_TimeNow) - to_us_since_boot(SpinUpTimeStart);
+
+            if (diff < SpinUpTime)
             {
-                SpinUp = false;
+                prop = (((float)diff / SpinUpTime) * (Speed - StartSpeed)) + StartSpeed;
             }
             else
             {
-                pwm_set_gpio_level(PWM_PIN, PWM_Value_Start);
+                SpinUp = false;
             }
         }
         else
         {
-            pwm_set_gpio_level(PWM_PIN, PWM_Value);
+            prop = Speed;
         }
-        
+
+
+        float tmp = std::clamp(prop, StartSpeed, Speed);
+        int32_t pwm = (SERVO_PWM_MAX - SERVO_PWM_MIN) * tmp + SERVO_PWM_MIN;
+        pwm = pwm > SERVO_PWM_MAX ? SERVO_PWM_MAX : (pwm < SERVO_PWM_MIN ? SERVO_PWM_MIN : pwm);
+        PWM_Value = pwm;
+        pwm_set_gpio_level(PWM_PIN, PWM_Value);
     }
 }
