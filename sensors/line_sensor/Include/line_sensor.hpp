@@ -113,6 +113,7 @@ enum LineRange_e {
         LINE_NO_TURN,
         LINE_TURN_LEFT,
         LINE_TURN_RIGHT,
+        LINE_CROSSING,
     };
 private:
     struct Config_s {
@@ -156,7 +157,7 @@ private:
     enum LineRange_e LineRange;
 
     enum LineTurn_e LineTurn;
-
+    
     int CenterLineIndex;
     int AnalogWidth;
     int OffsetThreshold;

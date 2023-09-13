@@ -130,7 +130,7 @@ public:
         {
             Error = SetPoint - _Input;
             //Integral
-            Integral = std::clamp(Integral + std::clamp(Error, -IntegralRateLimit, IntegralRateLimit), -IntegralLimit, IntegralLimit);
+            Integral = std::clamp(Integral, -IntegralLimit, IntegralLimit);// + std::clamp(Error, -IntegralRateLimit, IntegralRateLimit)
         
             //Derivative
             Derivative = (1.0f - DerivativeCutoff) * Derivative + DerivativeCutoff * (_Input - LastInput); //Derivative on measurement, with moving average filter

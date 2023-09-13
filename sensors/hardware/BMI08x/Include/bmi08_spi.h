@@ -69,8 +69,9 @@ BMI08X_INTF_RET_TYPE bmi08x_spi_write(uint8_t reg_addr, const uint8_t *reg_data,
 void bmi08x_delay_us(uint32_t period, void *intf_ptr);
 
 int BMI088_init(BMI08x_inst_t *inst, port_spi_t *gyro_port, port_spi_t *accel_port, uint gyro_dev_num, uint accel_dev_num);
-
+//bool BMI088_init(port_spi_t *port, uint gyro_dev_num, uint accel_dev_num);
 int BMI088_ReadData(BMI08x_inst_t *inst);
+//void BMI088_ReadData(port_spi_t *port, uint gyro_dev_num, uint accel_dev_num, int16_t results[6]);
 
 #ifdef __cplusplus
 }

@@ -24,10 +24,11 @@ void sduino_adc_init()
 }
 
 #define DRV_R 473.5f
-constexpr auto MOTOR_B_ENCODER_A_PIN = 1U;
-constexpr auto MOTOR_B_ENCODER_B_PIN = 3U;
-constexpr auto MOTOR_A_ENCODER_A_PIN = 24U;
-constexpr auto MOTOR_A_ENCODER_B_PIN = 25U;
+constexpr auto ESC_PWM_PIN = 26U; //pwm5 A
+constexpr auto MOTOR_B_ENCODER_A_PIN = 1U; //pwm0 b
+constexpr auto MOTOR_B_ENCODER_B_PIN = 3U; //pwm1 b
+constexpr auto MOTOR_A_ENCODER_A_PIN = 24U; // reik pakeist i 23 pwm3 b
+constexpr auto MOTOR_A_ENCODER_B_PIN = 25U; //pwm4 b reik pakeist i 24 pwm4 a
 constexpr auto MOTOR_B_ENCODER_PINS_MASK = 1U << MOTOR_B_ENCODER_A_PIN | 1U << MOTOR_B_ENCODER_B_PIN;
 constexpr auto MOTOR_A_ENCODER_PINS_MASK = 1U << MOTOR_A_ENCODER_A_PIN | 1U << MOTOR_A_ENCODER_B_PIN;
 constexpr auto MOTOR_MIN_RPM = 260;
@@ -390,12 +391,16 @@ void LineFollower_s::stop_error(void)
     printf("DBG:STOP_ERROR\n");
 }
 
+//static const int mapc[LINE_SENSOR_HW_NUM_SENSORS] = {1, 3, 5, 7, 9, 11, 13, 14, 12, 10, 8, 6, 4, 2, 0};
+
 void LineFollower_s::init(void)
 {
     LED0.init(SDUINO_INTERNAL_LED_PIN);
     stdio_init_all();
    
     //while (!stdio_usb_connected()) { sleep_ms(500); }
+
+    printf("DBG:INIT\n");
 
     i2c_init(i2c_internal, 400 * 1000);
     gpio_set_function(SDUINO_INTERNAL_I2C_SDA_PIN, GPIO_FUNC_I2C);
@@ -434,28 +439,94 @@ void LineFollower_s::init(void)
 
     DriveA.init(SDUINO_INTERNAL_DRV_A_IN1_PIN, SDUINO_INTERNAL_DRV_A_IN2_PIN);
     DriveB.init(SDUINO_INTERNAL_DRV_B_IN1_PIN, SDUINO_INTERNAL_DRV_B_IN2_PIN);
-    ESC.init(23);
-    sduino_adc_init();
-
-    if (port_i2c_init(&i2c_port, i2c_internal, PORT_MUX_DEFAULT_ADDRESS) == PORT_ERROR) printf("DBG:PORT_I2C_INIT->FAIL\n");
+    ESC.init(23);//ESC_PWM_PIN
+    //sduino_adc_init();
     if (port_spi_init(&spi_port, spi_internal) == PORT_ERROR) printf("DBG:PORT_SPI_INIT->FAIL\n");
-
+    printf("DBG:SPI INIT\n");
+    if (port_i2c_init(&i2c_port, i2c_internal, PORT_MUX_DEFAULT_ADDRESS) == PORT_ERROR) printf("DBG:PORT_I2C_INIT->FAIL\n");
+    printf("DBG:I2C INIT\n");
     LineSensorHW.port_inst = &i2c_port;
-    if (LineSensor.init(&LineSensorHW) == LINE_SENSOR_ERROR) {
-        printf("DBG:LINE_SENSOR_INIT->FAIL\n");
-        while (true) { tight_loop_contents(); }
-    }
+    // if (line_sensor_hw_init(&LineSensorHW) == LINE_SENSOR_HW_ERROR) printf("DBG:PORT_HW_INIT->FAIL\n");
+    // printf("DBG:HW INIT\n");
 
-    if(!IMU.init(&i2c_port, &spi_port)) {
-        printf("DBG:IMU_INIT->FAIL\n");
-        while (true) { tight_loop_contents(); }
+    // uint16_t lows[PADC_BUFFER_SIZE];
+    // uint16_t highs[PADC_BUFFER_SIZE];
+    // for (int i = 0; i < 15; i++)
+    // {
+    //     lows[i] = std::numeric_limits<uint16_t>::max();
+    //     highs[i] = std::numeric_limits<uint16_t>::min();
+    //     line_sensor_hw_set_emitter_power(&LineSensorHW, i, 1.0f);
+    //     line_sensor_hw_set_emitter_enable(&LineSensorHW, i, true);
+    //     line_sensor_hw_set_led_enable(&LineSensorHW, i, true);
+    // }
+    // lows[15] = std::numeric_limits<uint16_t>::max();
+    // highs[15] = std::numeric_limits<uint16_t>::min();
+    // line_sensor_hw_set_emitter_enable(&LineSensorHW, LINE_SENSOR_STROBE_EMITER, true);
+    // line_sensor_hw_set_emitter_enable(&LineSensorHW, LINE_SENSOR_STROBE_EMITER, true);
+    // line_sensor_hw_emitter_update(&LineSensorHW);
+    // line_sensor_hw_led_update(&LineSensorHW);
+
+    // printf("DBG:LEDS INIT\n");
+    
+    // for(;;)
+    // {
+    //     uint16_t buffer[PADC_BUFFER_SIZE];
+    //     padc_start();
+    //     gpio_put(SDUINO_INTERNAL_LED_PIN, false);
+    //     while (!padc_new_data_available())
+    //     {
+            
+    //         //printf("DBG:WAITING\n");
+    //         //sleep_ms(100);
+    //     }
+
+        
+
+    //     gpio_put(SDUINO_INTERNAL_LED_PIN, true);
+    //     if (padc_read(buffer))
+    //     {
+    //         //00      | 01      | 02      | 03      | 04      | 05      | 06      | 07      | 08      | 09      | 10      | 11      | 12      | 13      | 14      | 15      |
+    //         //14H 14L | 00H 00L | 13H 13L | 01H 01L | 12H 12L | 02H 02L | 11H 11L | 03H 03L | 10H 10L | 04H 04L | 09H 09L | 05H 05L | 08H 08L | 06H 06L | 07H 07L | DUH DUL |
+    //         // printf("%d | %d | %d | %d | %d | %d | %d / %d \\ %d | %d | %d | %d | %d | %d | %d |< %d\n",
+    //         //     buffer[1],  buffer[3],  buffer[5],  buffer[7],  buffer[9], buffer[11],
+    //         //     buffer[13],  buffer[14],  buffer[12],  buffer[10],  buffer[8], buffer[6],
+    //         //     buffer[4], buffer[2], buffer[0], buffer[15]
+    //         // );
+    //         //sleep_ms(100);
+    //         for (int i = 0; i < 15; i++)
+    //         {
+    //             uint16_t val = buffer[mapc[i]];
+    //             lows[i] = std::min(val, lows[i]);
+    //             highs[i] = std::max(val, highs[i]);
+    //             float Span = highs[i] != lows[i] ? (float)(highs[i] - lows[i]) : 1.0f;
+    //             float Value = ((float)(val - lows[i])) / Span;
+    //             bool Detected = Value > 0.5f + LINE_SENSOR_THRESHOLD_CLEARANCE ? true : (Value < 0.5f - LINE_SENSOR_THRESHOLD_CLEARANCE ? false : Detected);
+    //             line_sensor_hw_set_led_power(&LineSensorHW, i, Detected ? 1.0f : 0.0f);
+    //         }
+            
+    //         line_sensor_hw_led_update(&LineSensorHW);
+    //     }
+    // }
+
+    
+    if (LineSensor.init(&LineSensorHW) == LINE_SENSOR_ERROR) {
+       printf("DBG:LINE_SENSOR_INIT->FAIL\n");
+       while (true) { tight_loop_contents(); }
     }
+    printf("LS INIT!\n");
+    if(!IMU.init(&i2c_port, &spi_port)) {
+       printf("DBG:IMU_INIT->FAIL\n");
+       while (true) { tight_loop_contents(); }
+    }
+    printf("IMU INIT!\n");
     load();
+    printf("LOAD!\n");
 
     IMU.startAsyncProcess();
+    printf("IMU START!\n");
     stop();
     wakeup();
-    //sleep();
+    sleep();
 }
 
 void LineFollower_s::save(void)
@@ -498,13 +569,13 @@ void LineFollower_s::load(void)
 
         PID_s::Config_t DrivePID = {
             .SetPoint = 0.0f,
-            .Gain = 1.9f,
+            .Gain = 1.0f,
             .IntegralTime = 0.25f,
             .IntegralLimit = 300.0f,
-            .IntegralRateLimit = 4.0f,
+            .IntegralRateLimit = 10.0f,
             .IntegralAntiWindup = 0.0f,
-            .DerivativeTime = 0.001f,
-            .DerivativeCutoff = 0.9f,
+            .DerivativeTime = 0.0f,
+            .DerivativeCutoff = 1.0f,
             .OutputLimit = 1.0f,
             .DeadZone = 0.026f
         };
@@ -520,7 +591,7 @@ void LineFollower_s::load(void)
         Config.DriveA.DeadZone = 0.024f;
         Config.DriveA.PWM_CLK_DIV = 1.0f;
         Config.DriveB.Bias = 0.1f;
-        Config.DriveB.DeadZone = 0.032f;
+        Config.DriveB.DeadZone = 0.024f;
         Config.DriveB.PWM_CLK_DIV = 1.0f;
 
         DriveA.loadConfiguration(Config.DriveA);
@@ -530,7 +601,7 @@ void LineFollower_s::load(void)
 
         LineSensor_s::Config_t LS_Config = {
             .EmittersPower = 1.0f,
-            .LedBrightness = 0.5f,
+            .LedBrightness = 1.0f,
             .TurnGain1 = 1.0f,
             .TurnGain2 = 1.0f,
             .OffsetDecayCoef = LINE_SENSOR_OFFSET_DECAY_COEF,
@@ -723,12 +794,12 @@ int LineFollower_s::set(int _Enum, float _Value)
 void LineFollower_s::run(void)
 {
     absolute_time_t TimeNow = get_absolute_time();
-    sduino_adc_read();
+    //sduino_adc_read();
     IMU.runAsyncProcess(TimeNow);
     LineSensor.process(TimeNow);
 
     computeControl(TimeNow);
-
+    
     // if (to_us_since_boot(get_absolute_time()) > to_us_since_boot(PrintTime))
     // {
     //     //printf("M1 %d, % .3f rpm, M2 %d, % .3f rpm, % .9f\n", Steps1, RPM1, Steps2, RPM2, PID_DriveB.getIntg());
@@ -835,12 +906,14 @@ void LineFollower_s::computeControl(absolute_time_t _TimeNow)
     auto [Range, Turn] = LineSensor.getLineDesc();
     auto Detected = LineSensor.isDetected();
 
-    // if (to_us_since_boot(get_absolute_time()) > to_us_since_boot(PrintTime))
-    // {
+    if (to_us_since_boot(get_absolute_time()) > to_us_since_boot(PrintTime))
+    {
     //     //printf("LH: %f \n", LineHeading);
     //     //printf("A: %f, B: %f\n", DriveA.getDuty(), DriveB.getDuty());
     //     //printf("M1 %d, % .3f rpm, M2 %d, % .3f rpm, % .9f\n", Steps1, RPM1, Steps2, RPM2, PID_DriveB.getIntg());
-    //     //printf("%f, %f, %f, %f, %d, %d\n", Speed0, TargetSpeed0, Speed1, TargetSpeed1, Encoder1_err, Encoder2_err);
+        char buffer[128];
+        sprintf(buffer, "CMD:WS(\"R\":%.2f,\"L\":%.2f,\"Y\":%.3f,\"H\":%.3f)\n", SpeedR, SpeedL, Yaw, LineHeading);
+        uart_puts(uart_internal, buffer);
     //     // char str1[15];
     //     // char str2[15];
     //     char buffer[128];
@@ -851,8 +924,8 @@ void LineFollower_s::computeControl(absolute_time_t _TimeNow)
     //     uart_puts(uart_internal, buffer);
     //     //printf("R: %d, L: %d, X: %d %f Y: %d %f O: %.9f L: %.9f Yaw: %.9f\n", iPulseR, iPulseL, iX, iX_f, iY, iY_f, iYaw, LineHeading, Yaw);
     //     //printf("sB:%f sA:%f BS:%f, SO:%f, oB:%f, oA:%f, vB:%f, vA:%f, M+:%f, M-:%f, iB:%f, iA:%f, pB:%f, pA:%f\n", SpeedA, SpeedB, BaseSpeed, SteeringOffset, OffsetB, OffsetA, OverdriveB, OverdriveA, OffsetMaxPos, OffsetMaxNeg, PID_DriveB.getIntegral(), PID_DriveA.getIntegral(), DriveB.getDuty(), DriveA.getDuty());
-    //     PrintTime = make_timeout_time_ms(500);
-    // }
+         PrintTime = make_timeout_time_ms(250);
+    }
     
     //EncoderPulseCountA = ENC_Data.PulseCountA;
     //EncoderPulseCountB = ENC_Data.PulseCountB;
@@ -874,7 +947,13 @@ void LineFollower_s::computeControl(absolute_time_t _TimeNow)
     float SPA, SPB;
     float BaseSpeed, SteeringOffset, SteeringGain, CruiseGain;
 
-    bool LineTracking = (Detected && !ReturningOnLine) || (!Detected && Turn != LineSensor_s::LineTurn_t::LINE_NO_TURN);
+    if (Range == LineSensor_s::LineRange_t::LINE_CENTER)
+    {
+        ReturningOnLine = false;
+    }
+
+    bool LineTracking = (Detected && !ReturningOnLine);// || (!Detected && Turn != LineSensor_s::LineTurn_t::LINE_NO_TURN);
+    //bool LineTracking = Detected;
 
     if (LineTracking)
     {
@@ -882,18 +961,13 @@ void LineFollower_s::computeControl(absolute_time_t _TimeNow)
         BrakeEnd = false;
         SteeringGain = Config.SteeringGain;
         CruiseGain = Config.CruiseGain;
-        SteeringOffset = -std::clamp(LineHeading * SteeringGain, -2.0f, 2.0f);
-        BaseSpeed = std::abs(LineHeading) < LINE_SENSOR_STEP_VALUE ? Config.ForwardSpeed : Config.ForwardSpeed - std::min(std::abs(LineHeading) * CruiseGain, Config.ForwardSpeed);
+        LineHeading = std::abs(LineHeading) < LINE_SENSOR_STEP_VALUE / 10.0f ? 0.0f : LineHeading;
+        SteeringOffset = -LineHeading * SteeringGain;
 
-        SPA = std::clamp(SteeringOffset >= 0.0f ? BaseSpeed : BaseSpeed + SteeringOffset, -1.0f, 1.0f);
-        SPB = std::clamp(SteeringOffset <= 0.0f ? BaseSpeed : BaseSpeed - SteeringOffset, -1.0f, 1.0f);
-    }
-    else if (ReturningOnLine)
-    {
-        if (Range == LineSensor_s::LineRange_t::LINE_CENTER)
-        {
-            ReturningOnLine = false;
-        }
+        BaseSpeed = Config.ForwardSpeed - std::clamp(std::abs(LineHeading) * CruiseGain, 0.0f, Config.ForwardSpeed);
+
+        SPA = std::clamp(SteeringOffset >= 0.0f ? BaseSpeed : BaseSpeed + SteeringOffset, -10.0f, 10.0f);
+        SPB = std::clamp(SteeringOffset <= 0.0f ? BaseSpeed : BaseSpeed - SteeringOffset, -10.0f, 10.0f);
     }
     else
     {
@@ -907,20 +981,22 @@ void LineFollower_s::computeControl(absolute_time_t _TimeNow)
             }
         }
 
-        SteeringGain = Config.SteeringGain2;
+        float SteeringGainF = Config.SteeringGain2;
+        float SteeringGainB = Config.SteeringGain3;
         CruiseGain = Config.CruiseGain2;
-        SteeringOffset = -std::clamp(LineHeading * SteeringGain, -2.0f, 2.0f);
-        BaseSpeed = -std::clamp(LineHeading * CruiseGain, -2.0f, 2.0f);
+        BaseSpeed = Config.ForwardSpeed - std::clamp(std::abs(LineHeading) * CruiseGain, 0.0f, Config.ForwardSpeed);
+        float SteeringOffsetF = -LineHeading * SteeringGainF;
+        float SteeringOffsetB = -LineHeading * SteeringGainB;
 
         if (LineHeading > 0)
         {
-            SPA = std::clamp(Config.ForwardSpeed + SteeringOffset, -1.0f, Config.CruiseGain6);
-            SPB = std::clamp(Config.ForwardSpeed - BaseSpeed, -1.0f, Config.CruiseGain5);
+            SPA = std::clamp(BaseSpeed + SteeringOffsetB, -10.0f, 10.0f);
+            SPB = std::clamp(BaseSpeed - SteeringOffsetF, -10.0f, 10.0f);
         }
         else
         {
-            SPA = std::clamp(Config.ForwardSpeed + BaseSpeed, -1.0f, Config.CruiseGain5);
-            SPB = std::clamp(Config.ForwardSpeed - SteeringOffset, -1.0f, Config.CruiseGain6);
+            SPA = std::clamp(BaseSpeed + SteeringOffsetF, -10.0f, 10.0f);
+            SPB = std::clamp(BaseSpeed - SteeringOffsetB, -10.0f, 10.0f);
         }
     }
 

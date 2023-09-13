@@ -1,0 +1,99 @@
+
+; .define public __PADC_DATA_BITS (14)
+; .define public __PADC_CNV_COUNT (15)
+; .define public __PADC_FLAG_IRQ  (0)
+
+; .program padc_sm0
+; .side_set 1 opt
+
+; .define public T_ACQ0 (5)
+; .define public N_ACQ0 (7)
+; .define public T_RSTH (5)
+; .define public T_RSTL (4)
+; .define public T_CNVH (5)
+; .define public T_CNVL (5)
+; .define public T_CLKL (1)
+; .define public T_CLKH (1)
+; .define public T_PUSH (6)
+; .define public T_JMPD (6)
+
+; .define public DATA_BITS __PADC_DATA_BITS
+; .define public CNV_COUNT __PADC_CNV_COUNT
+; .define public IRQ_FLAG  __PADC_FLAG_IRQ
+
+; .define public IN_DATA_PIN        (0)
+; .define public IN_DATA_PIN_HIGH   (1)
+; .define public IN_DATA_PIN_LOW    (0)
+; .define public IN_DATA_WIDTH      (1)
+
+; .define public SIDE_CLK_PIN       (0)
+; .define public SIDE_CLK_PIN_HIGH  (1)
+; .define public SIDE_CLK_PIN_LOW   (0)
+
+; .define public SET_RESET_PIN      (0)
+; .define public SET_RESET_PIN_HIGH (1)
+; .define public SET_RESET_PIN_LOW  (0)
+
+; .define public SET_CNV_PIN        (2)
+; .define public SET_CNV_PIN_HIGH   (8)
+; .define public SET_CNV_PIN_LOW    (0)
+
+
+; ; 40MHz 25ns
+; .wrap_target
+;     set pins, SET_RESET_PIN_HIGH                        [T_RSTH - 1] ; SET RESET, multiplexers reset
+;     set pins, SET_RESET_PIN_LOW                         [T_RSTL - 3] ; CLR RESET
+;     pull                                                             ; PULL the number of conversions requested
+;     mov x, OSR                                                       ; SET X to number of conversions                                       
+; cnv_loop:
+;     set pins, SET_CNV_PIN_HIGH                          [T_CNVH - 1] ; SET CNV, start first conversion
+;     set pins, SET_CNV_PIN_LOW                           [T_CNVL - 2] ; CLR CNV
+;     wait 0 pin IN_DATA_PIN                                           ; WAIT for data PIN LOW (bussy indicator bit)
+
+;     set y, (N_ACQ0 - 1)                                  [T_ACQ0 - 1] ; SET Y to number of first acquisition wait cycles
+; acq1_loop:
+;     jmp y-- acq1_loop                                   [T_ACQ0 - 1] ; JMP while Y != 0, decrement Y
+
+;     set pins, SET_CNV_PIN_HIGH                          [T_CNVH - 1] ; SET CNV, start second conversion
+;     set pins, SET_CNV_PIN_LOW                           [T_CNVL - 2] ; CLR CNV
+;     wait 0 pin IN_DATA_PIN                                           ; WAIT for data PIN LOW (bussy indicator bit)
+
+;     set y, (DATA_BITS - 2)       side SIDE_CLK_PIN_HIGH [T_CLKH - 1] ; SET X to number of data bits to read, set the clock pin high
+; data_loop:
+;     in pins, IN_DATA_WIDTH       side SIDE_CLK_PIN_LOW  [T_CLKL - 1] ; IN, shift in bits from data pin, set the clock pin low
+;     jmp y-- data_loop            side SIDE_CLK_PIN_HIGH [T_CLKH - 1] ; JMP while Y != 0, decrement Y, set the clock pin high
+;     in pins, IN_DATA_WIDTH       side SIDE_CLK_PIN_LOW  [T_CLKL - 1] ; IN, shift in last bits from data pin, set the clock pin low
+;     push                                                [T_PUSH - 1] ; PUSH ISR to fifo
+;     jmp x-- cnv_loop                                    [T_JMPD - 1] ; JMP while X != 0, decrement X
+
+;     irq wait IRQ_FLAG                                                ; IRQ 0, Wait for cpu to process data
+; .wrap
+; ;1  //set
+; ;2  //in -> busybit
+; ;3  //jmp 12--
+; ;4  //in -> bit 12
+; ;5  //jmp 11--
+; ;6  //in -> bit 11
+; ;7  //jmp 10--
+; ;8  //in -> bit 10
+; ;9  //jmp 9--
+; ;10 //in -> bit 9
+; ;11 //jmp 8--
+; ;12 //in -> bit 8
+; ;13 //jmp 7--
+; ;14 //in -> bit 7
+; ;15 //jmp 6--
+; ;16 //in -> bit 6
+; ;17 //jmp 5--
+; ;18 //in -> bit 5
+; ;19 //jmp 4--
+; ;20 //in -> bit 4
+; ;21 //jmp 3--
+; ;22 //in -> bit 3
+; ;23 //jmp 2--
+; ;24 //in -> bit 2
+; ;25 //jmp 1--
+; ;26 //in -> bit 1
+; ;27 //jmp 0--
+; ;28 //in -> bit 0
+; ;29 //push

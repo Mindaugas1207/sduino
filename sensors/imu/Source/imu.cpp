@@ -9,6 +9,9 @@ volatile bool data_sync_int = true;
 
 BMI08x_inst_t BMI088dev;
 MMC5603_inst_t MMC5603dev;
+port_spi_t * spi_inst;
+uint gyro_dev;
+uint accel_dev;
 
 static void imu_hw_callback(uint gpio, uint32_t events);
 inline bool imu_hw_new_data_available();
@@ -32,15 +35,19 @@ bool imu_hw_init(void *hw0_inst, void *hw1_inst)
 #ifdef IMU_USE_MAG
     port_i2c_t * i2c_inst = (port_i2c_t*)hw0_inst;
 #endif
-    port_spi_t * spi_inst = (port_spi_t*)hw1_inst;
+    spi_inst = (port_spi_t*)hw1_inst;
 
-    uint gyro_dev = port_spi_add_device(spi_inst, SDUINO_INTERNAL_IMU_GYRO_CS_PIN);
-    uint accel_dev = port_spi_add_device(spi_inst, SDUINO_INTERNAL_IMU_ACCEL_CS_PIN);
+    gyro_dev = port_spi_add_device(spi_inst, SDUINO_INTERNAL_IMU_GYRO_CS_PIN);
+    accel_dev = port_spi_add_device(spi_inst, SDUINO_INTERNAL_IMU_ACCEL_CS_PIN);
 
     if (BMI088_init(&BMI088dev, spi_inst, spi_inst, gyro_dev, accel_dev) != BMI08X_OK) {
         printf("BMI INIT FAIL\n");
         return false;
     }
+    // if (BMI088_init(spi_inst, gyro_dev, accel_dev) != true) {
+    //     printf("BMI INIT FAIL\n");
+    //     return false;
+    // }
 #ifdef IMU_USE_MAG
     if (MMC5603_init(&MMC5603dev, i2c_inst, PORT_CHANNEL_ANY, MMC5603_DEFAULT_ADDRESS) != MMC5603_OK) {
         printf("MMC INIT FAIL\n");
@@ -68,6 +75,8 @@ inline void imu_hw_stop()
 inline void imu_hw_read(float _output[IMU_NDATA])
 {
     data_sync_int = false;
+    int16_t data[6];
+    //BMI088_ReadData(spi_inst, gyro_dev, accel_dev, data);
     BMI088_ReadData(&BMI088dev);
 #ifdef IMU_USE_MAG
     //MMC5603_ReadDataBlocking(&MMC5603dev);;
@@ -80,6 +89,12 @@ inline void imu_hw_read(float _output[IMU_NDATA])
     _output[3] = GYRO_LSB_TO_RPS((float)BMI088dev.gyro.x);
     _output[4] = GYRO_LSB_TO_RPS((float)BMI088dev.gyro.y);
     _output[5] = GYRO_LSB_TO_RPS((float)BMI088dev.gyro.z);
+    // _output[0] = ACCEL_LSB_TO_MPS2((float)data[0]);
+    // _output[1] = ACCEL_LSB_TO_MPS2((float)data[1]);
+    // _output[2] = ACCEL_LSB_TO_MPS2((float)data[2]);
+    // _output[3] = GYRO_LSB_TO_RPS((float)data[3]);
+    // _output[4] = GYRO_LSB_TO_RPS((float)data[4]);
+    // _output[5] = GYRO_LSB_TO_RPS((float)data[5]);
 #ifdef IMU_USE_MAG
     _output[6] = MAG_LSB_TO_UT((float)MMC5603dev.mag.x);
     _output[7] = MAG_LSB_TO_UT((float)MMC5603dev.mag.y);
@@ -92,7 +107,7 @@ inline void imu_hw_read(float _output[IMU_NDATA])
 
 void IMU_s::biasCalibrationInit()
 {
-    ftest_init();
+   // ftest_init();
 
     Accelerometer.Accum.X = 0.0f;
     Accelerometer.Accum.Y = 0.0f;

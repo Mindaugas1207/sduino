@@ -126,35 +126,237 @@ int BMI088_init(BMI08x_inst_t *inst, port_spi_t *gyro_port, port_spi_t *accel_po
     return status;
 }
 
-void _bmi08a_get_synchronized_data(struct bmi08x_sensor_data *accel,
-                                    struct bmi08x_sensor_data *gyro,
-                                    struct bmi08x_dev *dev)
+#define DUMY_OFFSET 1
+#define BMI08X_GYRO_INT3_LVL_POS 0
+extern const uint8_t bmi08x_config_file[];
+
+void BMI088_ReadData2(port_spi_t *port, uint gyro_dev_num, uint accel_dev_num, int16_t results[6])
 {
 
-    uint8_t temp_buff[12];
+    uint8_t data[12];
 
-    port_spi_dev_t* intf = (port_spi_dev_t*)dev->intf_ptr_accel;
-    port_spi_read_mem(intf->port, intf->dev_num, BMI08X_REG_ACCEL_GP_0 | BMI08X_SPI_RD_MASK, temp_buff, 12);
+    port_spi_read_mem(port, accel_dev_num, BMI08X_SPI_RD_MASK | BMI08X_REG_ACCEL_GP_0, data, DUMY_OFFSET + 11);
 
-    accel->x = (int16_t)((temp_buff[2] << 8) | temp_buff[1]); /* Data in X axis */
-    accel->y = (int16_t)((temp_buff[4] << 8) | temp_buff[3]); /* Data in Y axis */
-    accel->z = (int16_t)((temp_buff[11] << 8) | temp_buff[10]); /* Data in Z axis */
+    results[0] = (int16_t)((data[DUMY_OFFSET + 1] << 8) | data[DUMY_OFFSET + 0]); /* Data in X axis */
+    results[1] = (int16_t)((data[DUMY_OFFSET + 3] << 8) | data[DUMY_OFFSET + 2]); /* Data in Y axis */
+    results[2] = (int16_t)((data[DUMY_OFFSET + 10] << 8) | data[DUMY_OFFSET + 9]); /* Data in Z axis */
 
-    intf = (port_spi_dev_t*)dev->intf_ptr_gyro;
-    port_spi_read_mem(intf->port, intf->dev_num, BMI08X_REG_GYRO_X_LSB | BMI08X_SPI_RD_MASK, temp_buff, 6);
+    port_spi_read_mem(port, gyro_dev_num, BMI08X_SPI_RD_MASK | BMI08X_REG_GYRO_X_LSB, data, 6);
 
-    gyro->x = (int16_t)((temp_buff[1] << 8) | temp_buff[0]); /* Data in X axis */
-    gyro->y = (int16_t)((temp_buff[3] << 8) | temp_buff[2]); /* Data in Y axis */
-    gyro->z = (int16_t)((temp_buff[5] << 8) | temp_buff[4]); /* Data in Z axis */
+    results[3] = (int16_t)((data[1] << 8) | data[0]); /* Data in X axis */
+    results[4] = (int16_t)((data[3] << 8) | data[2]); /* Data in Y axis */
+    results[5] = (int16_t)((data[5] << 8) | data[4]); /* Data in Z axis */
 }
 
 int BMI088_ReadData(BMI08x_inst_t *inst)
 {
     //int status = BMI08X_OK;
 
-    _bmi08a_get_synchronized_data(&inst->accel, &inst->gyro, &inst->device);
+    bmi08a_get_synchronized_data(&inst->accel, &inst->gyro, &inst->device);
 
     return BMI08X_OK;
 }
 
+
+
+
+bool BMI088_init2(port_spi_t *port, uint gyro_dev_num, uint accel_dev_num)
+{
+    uint8_t data[7];
+
+    port_spi_read_mem(port, accel_dev_num, BMI08X_SPI_RD_MASK | BMI08X_REG_ACCEL_CHIP_ID, data, DUMY_OFFSET + 1);
+    port_spi_read_mem(port, accel_dev_num, BMI08X_SPI_RD_MASK | BMI08X_REG_ACCEL_CHIP_ID, data, DUMY_OFFSET + 1);
+    if (data[DUMY_OFFSET + 0] != BMI088_ACCEL_CHIP_ID)
+        return false;
+    port_spi_read_mem(port, gyro_dev_num, BMI08X_SPI_RD_MASK | BMI08X_REG_GYRO_CHIP_ID, data, 1);
+    if (data[0] != BMI08X_GYRO_CHIP_ID)
+        return false;
+    data[0] = BMI08X_SOFT_RESET_CMD;
+    port_spi_write_mem(port, accel_dev_num, BMI08X_REG_ACCEL_SOFTRESET, data, 1);
+    port_delay_us(1000);
+    port_spi_read_mem(port, accel_dev_num, BMI08X_SPI_RD_MASK | BMI08X_REG_ACCEL_CHIP_ID, data, DUMY_OFFSET + 1);
+    port_spi_read_mem(port, accel_dev_num, BMI08X_SPI_RD_MASK | BMI08X_REG_ACCEL_CHIP_ID, data, DUMY_OFFSET + 1);
+    if (data[DUMY_OFFSET + 0] != BMI088_ACCEL_CHIP_ID)
+        return false;
+
+    data[0] = 0;
+    port_spi_write_mem(port, accel_dev_num, BMI08X_REG_ACCEL_PWR_CONF, data, 1);
+    port_delay_us(450);
+    port_spi_write_mem(port, accel_dev_num, BMI08X_REG_ACCEL_INIT_CTRL, data, 1);
+    data[0] = 0;
+    port_spi_write_mem(port, accel_dev_num, BMI08X_REG_ACCEL_RESERVED_5B, data, 1);
+    port_spi_write_mem(port, accel_dev_num, BMI08X_REG_ACCEL_RESERVED_5C, data, 1);
+    port_spi_write_mem(port, accel_dev_num, BMI08X_REG_ACCEL_FEATURE_CFG, bmi08x_config_file, BMI08X_CONFIG_STREAM_SIZE);
+    data[0] = 1;
+    port_spi_write_mem(port, accel_dev_num, BMI08X_REG_ACCEL_INIT_CTRL, data, 1);
+    port_delay_us(BMI08X_ASIC_INIT_TIME_MS * 1000);
+    port_spi_read_mem(port, accel_dev_num, BMI08X_SPI_RD_MASK | BMI08X_REG_ACCEL_INTERNAL_STAT, data, DUMY_OFFSET + 1);
+    if (data[DUMY_OFFSET + 0] != 1)
+        return false;
+    data[0] = BMI08X_ACCEL_PM_ACTIVE;
+    port_spi_write_mem(port, accel_dev_num, BMI08X_REG_ACCEL_PWR_CONF, data, 1);
+    port_delay_us(5 * 1000);
+    data[0] = BMI08X_ACCEL_POWER_ENABLE;
+    port_spi_write_mem(port, accel_dev_num, BMI08X_REG_ACCEL_PWR_CTRL, data, 1);
+    port_delay_us(5 * 1000);
+    data[0] = BMI08X_GYRO_PM_NORMAL;
+    port_spi_write_mem(port, gyro_dev_num, BMI08X_REG_GYRO_LPM1, data, 1);
+    port_delay_us(30 * 1000);
+
+    data[0] = (BMI08X_ACCEL_BW_NORMAL << 4) | BMI08X_ACCEL_ODR_800_HZ;
+    data[1] = BMI088_ACCEL_RANGE_24G;
+    port_spi_write_mem(port, accel_dev_num, BMI08X_REG_ACCEL_CONF, data, 2);
+    data[0] = BMI08X_GYRO_RANGE_2000_DPS;
+    data[1] = BMI08X_GYRO_BW_116_ODR_1000_HZ;
+    port_spi_write_mem(port, gyro_dev_num, BMI08X_REG_GYRO_RANGE, data, 2);
+
+    port_spi_read_mem(port, accel_dev_num, BMI08X_SPI_RD_MASK | BMI08X_REG_ACCEL_FEATURE_CFG, data, DUMY_OFFSET + 6);
+    data[DUMY_OFFSET + 4] = BMI08X_ACCEL_DATA_SYNC_MODE_1000HZ & 0xFF;
+    data[DUMY_OFFSET + 5] = BMI08X_ACCEL_DATA_SYNC_MODE_1000HZ >> 8;
+    port_spi_write_mem(port, accel_dev_num, BMI08X_REG_ACCEL_FEATURE_CFG, &data[DUMY_OFFSET], 6);
+    port_delay_us(100 * 1000);
+
+    port_spi_read_mem(port, accel_dev_num, BMI08X_SPI_RD_MASK | BMI08X_REG_ACCEL_INT1_IO_CONF, data, DUMY_OFFSET + 1);
+    data[DUMY_OFFSET + 0] &= ~(BMI08X_ACCEL_INT_EDGE_MASK | BMI08X_ACCEL_INT_LVL_MASK | BMI08X_ACCEL_INT_OD_MASK | BMI08X_ACCEL_INT_IO_MASK | BMI08X_ACCEL_INT_IN_MASK);
+    data[DUMY_OFFSET + 0] |= (BMI08X_INT_ACTIVE_HIGH << BMI08X_ACCEL_INT_LVL_POS) |
+                             (BMI08X_INT_MODE_PUSH_PULL << BMI08X_ACCEL_INT_OD_POS) |
+                             (BMI08X_ENABLE << BMI08X_ACCEL_INT_EDGE_POS) |
+                             (BMI08X_ENABLE << BMI08X_ACCEL_INT_IN_POS) |
+                             (BMI08X_DISABLE << BMI08X_ACCEL_INT_IO_POS);
+    port_spi_write_mem(port, accel_dev_num, BMI08X_REG_ACCEL_INT1_IO_CONF, &data[DUMY_OFFSET], 1);
+
+    data[0] = BMI08X_ACCEL_INTA_ENABLE;
+    port_spi_write_mem(port, accel_dev_num, BMI08X_REG_ACCEL_INT2_MAP, data, 1);
+
+    port_spi_read_mem(port, accel_dev_num, BMI08X_SPI_RD_MASK | BMI08X_REG_ACCEL_INT2_IO_CONF, data, DUMY_OFFSET + 1);
+    data[DUMY_OFFSET + 0] &= ~(BMI08X_ACCEL_INT_LVL_MASK | BMI08X_ACCEL_INT_OD_MASK | BMI08X_ACCEL_INT_IO_MASK | BMI08X_ACCEL_INT_IN_MASK);
+    data[DUMY_OFFSET + 0] |= (BMI08X_INT_ACTIVE_HIGH << BMI08X_ACCEL_INT_LVL_POS) |
+                             (BMI08X_INT_MODE_PUSH_PULL << BMI08X_ACCEL_INT_OD_POS) |
+                             (BMI08X_DISABLE << BMI08X_ACCEL_INT_IN_POS) |
+                             (BMI08X_ENABLE << BMI08X_ACCEL_INT_IO_POS);
+    port_spi_write_mem(port, accel_dev_num, BMI08X_REG_ACCEL_INT2_IO_CONF, &data[DUMY_OFFSET], 1);
+
+    port_spi_read_mem(port, gyro_dev_num, BMI08X_SPI_RD_MASK | BMI08X_REG_GYRO_INT3_INT4_IO_MAP, data, 1);
+    data[0] &= ~(BMI08X_GYRO_INT3_MAP_MASK | BMI08X_GYRO_INT4_MAP_MASK);
+    data[0] |= (BMI08X_ENABLE << BMI08X_GYRO_INT3_MAP_POS) | (BMI08X_DISABLE << BMI08X_GYRO_INT4_MAP_POS);
+    port_spi_write_mem(port, gyro_dev_num, BMI08X_REG_GYRO_INT3_INT4_IO_MAP, data, 1);
+
+    port_spi_read_mem(port, gyro_dev_num, BMI08X_SPI_RD_MASK | BMI08X_REG_GYRO_INT3_INT4_IO_CONF, data, 1);
+    data[0] &= ~(BMI08X_GYRO_INT3_LVL_MASK | BMI08X_GYRO_INT3_OD_MASK | BMI08X_GYRO_INT4_LVL_MASK | BMI08X_GYRO_INT4_OD_MASK);
+    data[0] |= (BMI08X_INT_MODE_PUSH_PULL << BMI08X_GYRO_INT3_LVL_POS) |
+               (BMI08X_INT_ACTIVE_HIGH << BMI08X_GYRO_INT3_OD_POS) |
+               (BMI08X_INT_MODE_PUSH_PULL << BMI08X_GYRO_INT4_LVL_POS) |
+               (BMI08X_INT_ACTIVE_HIGH << BMI08X_GYRO_INT4_OD_POS);
+    port_spi_write_mem(port, gyro_dev_num, BMI08X_REG_GYRO_INT3_INT4_IO_CONF, data, 1);
+    data[0] = BMI08X_GYRO_DRDY_INT_DISABLE_VAL;
+    port_spi_write_mem(port, gyro_dev_num, BMI08X_REG_GYRO_INT_CTRL, data, 1);
+
+    return true;
+}
+
+
+
+//accel dummy read chip id // BMI08X_REG_ACCEL_CHIP_ID
+//accel read chip id // BMI08X_REG_ACCEL_CHIP_ID
+//check id // BMI085_ACCEL_CHIP_ID // BMI088_ACCEL_CHIP_ID
+//gyro read chip id // BMI08X_REG_GYRO_CHIP_ID
+//check id // BMI08X_GYRO_CHIP_ID
+
+//accel set reset // BMI08X_REG_ACCEL_SOFTRESET -> BMI08X_SOFT_RESET_CMD
+//delay 1ms
+//accel dummy read chip id // BMI08X_REG_ACCEL_CHIP_ID
+//accel read chip id // BMI08X_REG_ACCEL_CHIP_ID
+//check id // BMI085_ACCEL_CHIP_ID // BMI088_ACCEL_CHIP_ID
+
+//load cfg
+//bmi08x_config_file
+//Dis pwr save mode // BMI08X_REG_ACCEL_PWR_CONF -> 0
+//delay 450 us
+//Dis cfg loading // BMI08X_REG_ACCEL_INIT_CTRL -> 0
+//index = 0; index < BMI08X_CONFIG_STREAM_SIZE; index+=len
+//uint8_t asic_msb = (uint8_t)((index / 2) >> 4);
+//uint8_t asic_lsb = ((index / 2) & 0x0F);
+//write BMI08X_REG_ACCEL_RESERVED_5B -> lsb
+//write BMI08X_REG_ACCEL_RESERVED_5C -> msb
+//write BMI08X_REG_ACCEL_FEATURE_CFG -> stream_data+index, len
+//En cfg loading // BMI08X_REG_ACCEL_INIT_CTRL -> 1
+//delay BMI08X_ASIC_INIT_TIME_MS ms
+//Check cfg // BMI08X_REG_ACCEL_INTERNAL_STAT == 1
+//write BMI08X_REG_ACCEL_PWR_CONF -> BMI08X_ACCEL_PM_ACTIVE
+//delay 5 ms
+//write BMI08X_REG_ACCEL_PWR_CTRL -> BMI08X_ACCEL_POWER_ENABLE
+//delay 5 ms
+//gyro
+//write BMI08X_REG_GYRO_LPM1 -> BMI08X_GYRO_PM_NORMAL
+//delay 30 ms
+
+/*
+case BMI08X_ACCEL_DATA_SYNC_MODE_2000HZ:
+    dev->accel_cfg.odr = BMI08X_ACCEL_ODR_1600_HZ;
+    dev->accel_cfg.bw = BMI08X_ACCEL_BW_NORMAL;
+    dev->gyro_cfg.odr = BMI08X_GYRO_BW_230_ODR_2000_HZ;
+    dev->gyro_cfg.bw = BMI08X_GYRO_BW_230_ODR_2000_HZ;
+    break;
+case BMI08X_ACCEL_DATA_SYNC_MODE_1000HZ:
+    dev->accel_cfg.odr = BMI08X_ACCEL_ODR_800_HZ;
+    dev->accel_cfg.bw = BMI08X_ACCEL_BW_NORMAL;
+    dev->gyro_cfg.odr = BMI08X_GYRO_BW_116_ODR_1000_HZ;
+    dev->gyro_cfg.bw = BMI08X_GYRO_BW_116_ODR_1000_HZ;
+    break;
+case BMI08X_ACCEL_DATA_SYNC_MODE_400HZ:
+    dev->accel_cfg.odr = BMI08X_ACCEL_ODR_400_HZ;
+    dev->accel_cfg.bw = BMI08X_ACCEL_BW_NORMAL;
+    dev->gyro_cfg.odr = BMI08X_GYRO_BW_47_ODR_400_HZ;
+    dev->gyro_cfg.bw = BMI08X_GYRO_BW_47_ODR_400_HZ;
+    break;
+*/
+//accel
+//data[0] = (BMI08X_ACCEL_BW_NORMAL << 4) | BMI08X_ACCEL_ODR_800_HZ
+//data[1] = BMI088_ACCEL_RANGE_24G
+//write BMI08X_REG_ACCEL_CONF -> data, 2
+//gyro
+//write BMI08X_REG_GYRO_BANDWIDTH -> BMI08X_GYRO_BW_116_ODR_1000_HZ
+//write BMI08X_REG_GYRO_RANGE -> BMI08X_GYRO_RANGE_2000_DPS
+
+//accel
+//read BMI08X_REG_ACCEL_FEATURE_CFG -> data, 6
+//data[4] = BMI08X_ACCEL_DATA_SYNC_MODE_1000HZ & 0xFF;
+//data[5] = BMI08X_ACCEL_DATA_SYNC_MODE_1000HZ >> 8;
+//write BMI08X_REG_ACCEL_FEATURE_CFG -> data, 6
+//delay 100 ms
+
+//ints
+//accel 1
+//read BMI08X_REG_ACCEL_INT1_IO_CONF -> data
+//data &= ~(BMI08X_ACCEL_INT_EDGE_MASK | BMI08X_ACCEL_INT_LVL_MASK | BMI08X_ACCEL_INT_OD_MASK | BMI08X_ACCEL_INT_IO_MASK | BMI08X_ACCEL_INT_IN_MASK)
+//data = (BMI08X_INT_ACTIVE_HIGH << BMI08X_ACCEL_INT_LVL_POS) |
+//       (BMI08X_INT_MODE_PUSH_PULL << BMI08X_ACCEL_INT_OD_POS) |
+//       (BMI08X_ENABLE << BMI08X_ACCEL_INT_EDGE_POS) |
+//       (BMI08X_ENABLE << BMI08X_ACCEL_INT_IN_POS) |
+//       (0 << BMI08X_ACCEL_INT_IO_POS)
+//write BMI08X_REG_ACCEL_INT1_IO_CONF -> data
+
+//accel 2
+//write BMI08X_REG_ACCEL_INT2_MAP -> BMI08X_ACCEL_INTA_ENABLE
+//read BMI08X_REG_ACCEL_INT2_IO_CONF -> data
+//data &= ~(BMI08X_ACCEL_INT_LVL_MASK | BMI08X_ACCEL_INT_OD_MASK | BMI08X_ACCEL_INT_IO_MASK | BMI08X_ACCEL_INT_IN_MASK)
+//data |= (BMI08X_INT_ACTIVE_HIGH << BMI08X_ACCEL_INT_LVL_POS) |
+//       (BMI08X_INT_MODE_PUSH_PULL << BMI08X_ACCEL_INT_OD_POS) |
+//       (0 << BMI08X_ACCEL_INT_IN_POS) |
+//       (BMI08X_ENABLE << BMI08X_ACCEL_INT_IO_POS)
+//write BMI08X_REG_ACCEL_INT2_IO_CONF -> data
+
+//gyro
+//read BMI08X_REG_GYRO_INT3_INT4_IO_MAP -> data
+//data = BMI08X_ENABLE << BMI08X_GYRO_INT3_MAP_POS
+//data = BMI08X_DISABLE << BMI08X_GYRO_INT4_MAP_POS
+//write BMI08X_REG_GYRO_INT3_INT4_IO_MAP -> data
+//read BMI08X_REG_GYRO_INT3_INT4_IO_CONF -> data
+//data &= ~(BMI08X_GYRO_INT3_LVL_MASK | BMI08X_GYRO_INT3_OD_MASK | BMI08X_GYRO_INT4_LVL_MASK | BMI08X_GYRO_INT4_OD_MASK)
+//data |= (BMI08X_INT_MODE_PUSH_PULL << BMI08X_GYRO_INT3_LVL_POS) |
+//        (BMI08X_INT_ACTIVE_HIGH << BMI08X_GYRO_INT3_OD_POS) |
+//        (BMI08X_INT_MODE_PUSH_PULL << BMI08X_GYRO_INT4_LVL_POS) |
+//        (BMI08X_INT_ACTIVE_HIGH << BMI08X_GYRO_INT4_OD_POS)
+//write BMI08X_REG_GYRO_INT3_INT4_IO_CONF -> data
+//write BMI08X_REG_GYRO_INT_CTRL -> BMI08X_GYRO_DRDY_INT_DISABLE_VAL
 

@@ -84,6 +84,7 @@
         "span": "cpp",
         "bitset": "cpp",
         "regex": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "xlocmon": "cpp"
     }
 }

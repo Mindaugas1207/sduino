@@ -40,15 +40,15 @@ static int line_sensor_hw_init(line_sesnor_hw_inst_t *inst)
 {
     // PADC init
     if (padc_init(30000000, 30000, PADC_DEFAULT_CLK_PIN, PADC_DEFAULT_DATA_PIN, PADC_DEFAULT_CNV_PIN, PADC_DEFAULT_RESET_PIN) == PADC_ERROR) return LINE_SENSOR_HW_ERROR;
-
+    printf("PADC INIT!\n");
     // IR LED driver init
     if (IS31FL3218_init(&inst->sensor_driver_inst, inst->port_inst, PORT_CHANNEL_0) == IS31FL3218_ERROR) return LINE_SENSOR_HW_ERROR;
     if (IS31FL3218_enable(&inst->sensor_driver_inst) == IS31FL3218_ERROR) return LINE_SENSOR_HW_ERROR;
-
+    printf("IR INIT!\n");
     // Indicator LED driver init
     if (IS31FL3218_init(&inst->led_driver_inst, inst->port_inst, PORT_CHANNEL_1) == IS31FL3218_ERROR) return LINE_SENSOR_HW_ERROR;
     if (IS31FL3218_enable(&inst->led_driver_inst) == IS31FL3218_ERROR) return LINE_SENSOR_HW_ERROR;
-
+    printf("LED INIT!\n");
     return LINE_SENSOR_HW_OK;
 }
 
@@ -119,8 +119,23 @@ static inline bool line_sensor_hw_is_new_data_available()
     return padc_new_data_available();
 }
 
-static inline void line_sensor_hw_read(uint _output[LINE_SENSOR_HW_NUM_SENSORS])
+static inline bool line_sensor_hw_read(uint _output[LINE_SENSOR_HW_NUM_SENSORS])
 {
+    // uint16_t buffer[PADC_BUFFER_SIZE];
+    // bool result = padc_read(buffer);
+    // if (result)
+    // {
+        
+    //     for (int i = 0; i < LINE_SENSOR_HW_NUM_SENSORS; i++)
+    //         _output[PADC_TO_POS_MAP[i]] = buffer[i] / 2;
+
+    //     printf("%d | %d | %d | %d | %d | %d | %d / %d \\ %d | %d | %d | %d | %d | %d | %d |< %d\n",
+    //         buffer[1],  buffer[3],  buffer[5],  buffer[7],  buffer[9], buffer[11],
+    //         buffer[13],  buffer[14],  buffer[12],  buffer[10],  buffer[8], buffer[6],
+    //         buffer[4], buffer[2], buffer[0], buffer[15]
+    //     );
+    //     sleep_ms(100);
+    // }
     uint16_t buffer[PADC_BUFFER_SIZE];
     padc_read_blocking(buffer);
 
@@ -135,6 +150,36 @@ static inline void line_sensor_hw_read(uint _output[LINE_SENSOR_HW_NUM_SENSORS])
     // sleep_ms(100);
     for (int i = 0; i < LINE_SENSOR_HW_NUM_SENSORS; i++)
         _output[PADC_TO_POS_MAP[i]] = buffer[i*2 + 1];
+    
+    return true;
+
+     //00      | 01      | 02      | 03      | 04      | 05      | 06      | 07      | 08      | 09      | 10      | 11      | 12      | 13      | 14      | 15      |
+    //14H 14L | 00H 00L | 13H 13L | 01H 01L | 12H 12L | 02H 02L | 11H 11L | 03H 03L | 10H 10L | 04H 04L | 09H 09L | 05H 05L | 08H 08L | 06H 06L | 07H 07L | DUH DUL |
+    
+
+    // printf("%d %d | %d %d | %d %d | %d %d | %d %d | %d %d | %d %d / %d %d \\ %d %d | %d %d | %d %d | %d %d | %d %d | %d %d | %d %d |< %d\n",
+    //     buffer[2],  buffer[3],  buffer[6],  buffer[7],  buffer[10], buffer[11],
+    //     buffer[14], buffer[15], buffer[18], buffer[19], buffer[22], buffer[23],
+    //     buffer[26], buffer[27], buffer[28], buffer[29],
+    //     buffer[24], buffer[25], buffer[20], buffer[21], buffer[16], buffer[17],
+    //     buffer[12], buffer[13], buffer[8],  buffer[9],  buffer[4],  buffer[5],
+    //     buffer[0],  buffer[1], buffer[30]
+    // );
+    // sleep_ms(100);
+    
+    // printf("%d %d\n",
+    //     buffer[28], buffer[29]
+    // );
+    // printf("%d | %d | %d | %d | %d | %d | %d / %d \\ %d | %d | %d | %d | %d | %d | %d |<\n",
+    //     buffer[0],  buffer[1],  buffer[2],  buffer[3],  buffer[4], buffer[5],
+    //     buffer[6],  buffer[7],  buffer[8],  buffer[9],  buffer[10], buffer[11],
+    //     buffer[12], buffer[13], buffer[14]
+    // );
+    // sleep_ms(100);
+    
+    
+    //00  01  | 02  03  | 04  05  | 06  07  | 08  09  | 10  11  | 12  13  | 14  15  | 16  17  | 18  19  | 20  21  | 22  23  | 24  25  | 26  27  | 28  29  | 30  31  |
+    //14H 14L | 00H 00L | 13H 13L | 01H 01L | 12H 12L | 02H 02L | 11H 11L | 03H 03L | 10H 10L | 04H 04L | 09H 09L | 05H 05L | 08H 08L | 06H 06L | 07H 07L | DUH DUL |
 }
 
 #ifdef __cplusplus
