@@ -85,6 +85,7 @@
         "bitset": "cpp",
         "regex": "cpp",
         "variant": "cpp",
-        "xlocmon": "cpp"
+        "xlocmon": "cpp",
+        "charconv": "cpp"
     }
 }

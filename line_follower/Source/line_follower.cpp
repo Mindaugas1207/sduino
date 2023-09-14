@@ -911,9 +911,17 @@ void LineFollower_s::computeControl(absolute_time_t _TimeNow)
     //     //printf("LH: %f \n", LineHeading);
     //     //printf("A: %f, B: %f\n", DriveA.getDuty(), DriveB.getDuty());
     //     //printf("M1 %d, % .3f rpm, M2 %d, % .3f rpm, % .9f\n", Steps1, RPM1, Steps2, RPM2, PID_DriveB.getIntg());
-        char buffer[128];
-        sprintf(buffer, "CMD:WS(\"R\":%.2f,\"L\":%.2f,\"Y\":%.3f,\"H\":%.3f)\n", SpeedR, SpeedL, Yaw, LineHeading);
-        uart_puts(uart_internal, buffer);
+        // char buffer[256];
+        // //sprintf(buffer, "CMD:WS(\"R\":%.2f,\"L\":%.2f,\"Y\":%.3f,\"H\":%.3f)\n", SpeedR, SpeedL, Yaw, LineHeading);
+
+        // int n = sprintf(buffer, "CMD:WS(");
+
+        // for (int i = 0; i < LineSensor._LineCount; i++)
+        // {
+        //     n += sprintf(buffer + n, "[%d,%d,%c]\n", LineSensor._Lines[i].Start, LineSensor._Lines[i].End, LineSensor._Lines[i].Color ? 'B' : 'W');
+        // }
+        // n += sprintf(buffer, ")\n");
+        // uart_puts(uart_internal, buffer);
     //     // char str1[15];
     //     // char str2[15];
     //     char buffer[128];
