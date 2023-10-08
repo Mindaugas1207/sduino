@@ -157,6 +157,8 @@ private:
     enum LineRange_e LineRange;
 
     enum LineTurn_e LineTurn;
+
+    
     
     int CenterLineIndex;
     int AnalogWidth;
@@ -177,6 +179,20 @@ public:
     typedef Config_s Config_t;
     typedef LineRange_e LineRange_t;
     typedef LineTurn_e LineTurn_t;
+
+    class Line_s {
+    public:
+        int Start;
+        int End;
+        bool Color; // false black, true white
+
+        bool isBlack() { return !Color; }
+        bool isWhite() { return Color; }
+        int  width()   { return End - Start; }
+    };
+
+    std::array<Line_s, LINE_SENSOR_NUM_SENSORS> _Lines;
+    int _LineCount = 0;
 
     int init(line_sesnor_hw_inst_t *_hw_inst);
     void reset();

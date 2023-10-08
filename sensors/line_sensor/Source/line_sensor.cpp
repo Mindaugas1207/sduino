@@ -268,21 +268,12 @@ std::tuple<float, bool> LineSensor_s::getLineData()
     return {0,false};
 }
 
-class Line_s {
-public:
-    int Start;
-    int End;
-    bool Color; // false black, true white
 
-    bool isBlack() { return !Color; }
-    bool isWhite() { return Color; }
-    int  width()   { return End - Start; }
-};
 
 std::tuple<float, bool> LineSensor_s::compute(absolute_time_t _TimeNow, std::array<uint, LINE_SENSOR_NUM_SENSORS> & _input)
 {
-    std::array<Line_s, LINE_SENSOR_NUM_SENSORS> _Lines;
-    int _LineCount = 0;
+    //std::array<Line_s, LINE_SENSOR_NUM_SENSORS> _Lines;
+    _LineCount = 0;
     int _ClosestEdge = CenterLineIndex;
     int _ClosestDistance = std::numeric_limits<int>::max();
     int _EdgeCount = 0;
