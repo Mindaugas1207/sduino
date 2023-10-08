@@ -10,6 +10,7 @@ include_directories("${SDUINO_PROJECT_PATH}/sensors/port/Include")
 include_directories("${SDUINO_PROJECT_PATH}/sensors/line_sensor/Include")
 include_directories("${SDUINO_PROJECT_PATH}/sensors/hardware/LED_DRIVER/Include")
 include_directories("${SDUINO_PROJECT_PATH}/sensors/hardware/padc/Include")
+include_directories("${SDUINO_PROJECT_PATH}/sensors/hardware/encoder/Include")
 include_directories("${SDUINO_PROJECT_PATH}/sensors/hardware/I2C_MUX/Include")
 include_directories("${SDUINO_PROJECT_PATH}/sensors/hardware/VL53L0X/Include")
 include_directories("${SDUINO_PROJECT_PATH}/sensors/hardware/BMI08x/Include")
@@ -26,6 +27,7 @@ target_compile_definitions(line_follower PUBLIC -DPORT_PI4MSD5V9540B)  # -D remo
 target_compile_definitions(line_follower PUBLIC -DINTERFACE_DEBUG)
 
 pico_generate_pio_header(line_follower ${SDUINO_PROJECT_PATH}/sensors/hardware/padc/Source/padc.pio)
+pico_generate_pio_header(line_follower ${SDUINO_PROJECT_PATH}/sensors/hardware/encoder/Source/encoder.pio)
 
 target_sources(line_follower PRIVATE
     Source/main.cpp
@@ -35,6 +37,7 @@ target_sources(line_follower PRIVATE
     ../motors/Source/motor_driver.cpp
     ../sensors/line_sensor/Source/line_sensor.cpp
     ../sensors/hardware/padc/Source/padc.c
+    ../sensors/hardware/encoder/Source/encoder.c
     ../sensors/hardware/LED_DRIVER/Source/IS31FL3218.c
     ../sensors/hardware/I2C_MUX/Source/PI4MSD5V9540B.c
     ../sensors/port/Source/port.c

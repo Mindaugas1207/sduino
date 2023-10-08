@@ -494,88 +494,88 @@ void IMU_s::compute(bool _NewData, absolute_time_t _TimeNow)
 
 
 
-void IMU_s::ftest_init()
-{
-    e_x << 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f;
-    e_P << 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-           0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-           0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-           0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-           0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-           0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
-           0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
-           0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,
-           0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f;
-}
+// void IMU_s::ftest_init()
+// {
+//     e_x << 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f;
+//     e_P << 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+//            0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+//            0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+//            0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+//            0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+//            0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
+//            0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+//            0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+//            0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f;
+// }
 
-Eigen::Matrix<float, 9, 1> IMU_s::ftest(float accelerationX, float accelerationY, float accelerationZ, float dt, float sigma_a, float sigma_m)
-{
-    using namespace Eigen;
-    // State transition matrix
-    Matrix<float, 9, 9> F;
-    F << 1.0f,   dt, 0.5f*dt*dt, 0.0f, 0.0f,       0.0f, 0.0f, 0.0f,       0.0f,
-         0.0f, 1.0f,         dt, 0.0f, 0.0f,       0.0f, 0.0f, 0.0f,       0.0f,
-         0.0f, 0.0f,       1.0f, 0.0f, 0.0f,       0.0f, 0.0f, 0.0f,       0.0f,
-         0.0f, 0.0f,       0.0f, 1.0f,   dt, 0.5f*dt*dt, 0.0f, 0.0f,       0.0f,
-         0.0f, 0.0f,       0.0f, 0.0f, 1.0f,         dt, 0.0f, 0.0f,       0.0f,
-         0.0f, 0.0f,       0.0f, 0.0f, 0.0f,       1.0f, 0.0f, 0.0f,       0.0f,
-         0.0f, 0.0f,       0.0f, 0.0f, 0.0f,       0.0f, 1.0f,   dt, 0.5f*dt*dt,
-         0.0f, 0.0f,       0.0f, 0.0f, 0.0f,       0.0f, 0.0f, 1.0f,         dt,
-         0.0f, 0.0f,       0.0f, 0.0f, 0.0f,       0.0f, 0.0f, 0.0f,       1.0f;
+// Eigen::Matrix<float, 9, 1> IMU_s::ftest(float accelerationX, float accelerationY, float accelerationZ, float dt, float sigma_a, float sigma_m)
+// {
+//     using namespace Eigen;
+//     // State transition matrix
+//     Matrix<float, 9, 9> F;
+//     F << 1.0f,   dt, 0.5f*dt*dt, 0.0f, 0.0f,       0.0f, 0.0f, 0.0f,       0.0f,
+//          0.0f, 1.0f,         dt, 0.0f, 0.0f,       0.0f, 0.0f, 0.0f,       0.0f,
+//          0.0f, 0.0f,       1.0f, 0.0f, 0.0f,       0.0f, 0.0f, 0.0f,       0.0f,
+//          0.0f, 0.0f,       0.0f, 1.0f,   dt, 0.5f*dt*dt, 0.0f, 0.0f,       0.0f,
+//          0.0f, 0.0f,       0.0f, 0.0f, 1.0f,         dt, 0.0f, 0.0f,       0.0f,
+//          0.0f, 0.0f,       0.0f, 0.0f, 0.0f,       1.0f, 0.0f, 0.0f,       0.0f,
+//          0.0f, 0.0f,       0.0f, 0.0f, 0.0f,       0.0f, 1.0f,   dt, 0.5f*dt*dt,
+//          0.0f, 0.0f,       0.0f, 0.0f, 0.0f,       0.0f, 0.0f, 1.0f,         dt,
+//          0.0f, 0.0f,       0.0f, 0.0f, 0.0f,       0.0f, 0.0f, 0.0f,       1.0f;
 
-    // Measurement matrix
-    Matrix<float, 3, 9> H;
-    H << 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-         0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
-         0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f;
+//     // Measurement matrix
+//     Matrix<float, 3, 9> H;
+//     H << 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+//          0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
+//          0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f;
 
-    // Process noise covariance
-    float dt4 = dt*dt*dt*dt;
-    float dt3 = dt*dt*dt;
-    float dt2 = dt*dt;
-    Matrix<float, 9, 9> Q;
-    Q << dt4/4, dt3/2, dt2/2,  0.0f,  0.0f,  0.0f,  0.0f,  0.0f,  0.0f,
-         dt3/2,   dt2,    dt,  0.0f,  0.0f,  0.0f,  0.0f,  0.0f,  0.0f,
-         dt3/2,    dt,  1.0f,  0.0f,  0.0f,  0.0f,  0.0f,  0.0f,  0.0f,
-         0.0f,   0.0f,  0.0f, dt4/4, dt3/2, dt2/2,  0.0f,  0.0f,  0.0f,
-         0.0f,   0.0f,  0.0f, dt3/2,   dt2,    dt,  0.0f,  0.0f,  0.0f,
-         0.0f,   0.0f,  0.0f, dt3/2,    dt,  1.0f,  0.0f,  0.0f,  0.0f,
-         0.0f,   0.0f,  0.0f,  0.0f,  0.0f,  0.0f, dt4/4, dt3/2, dt2/2,
-         0.0f,   0.0f,  0.0f,  0.0f,  0.0f,  0.0f, dt3/2,   dt2,    dt,
-         0.0f,   0.0f,  0.0f,  0.0f,  0.0f,  0.0f, dt3/2,    dt,  1.0f;
+//     // Process noise covariance
+//     float dt4 = dt*dt*dt*dt;
+//     float dt3 = dt*dt*dt;
+//     float dt2 = dt*dt;
+//     Matrix<float, 9, 9> Q;
+//     Q << dt4/4, dt3/2, dt2/2,  0.0f,  0.0f,  0.0f,  0.0f,  0.0f,  0.0f,
+//          dt3/2,   dt2,    dt,  0.0f,  0.0f,  0.0f,  0.0f,  0.0f,  0.0f,
+//          dt3/2,    dt,  1.0f,  0.0f,  0.0f,  0.0f,  0.0f,  0.0f,  0.0f,
+//          0.0f,   0.0f,  0.0f, dt4/4, dt3/2, dt2/2,  0.0f,  0.0f,  0.0f,
+//          0.0f,   0.0f,  0.0f, dt3/2,   dt2,    dt,  0.0f,  0.0f,  0.0f,
+//          0.0f,   0.0f,  0.0f, dt3/2,    dt,  1.0f,  0.0f,  0.0f,  0.0f,
+//          0.0f,   0.0f,  0.0f,  0.0f,  0.0f,  0.0f, dt4/4, dt3/2, dt2/2,
+//          0.0f,   0.0f,  0.0f,  0.0f,  0.0f,  0.0f, dt3/2,   dt2,    dt,
+//          0.0f,   0.0f,  0.0f,  0.0f,  0.0f,  0.0f, dt3/2,    dt,  1.0f;
 
-    Q *= sigma_a * sigma_a;
+//     Q *= sigma_a * sigma_a;
 
-    // Measurement noise covariance
-    Matrix<float, 3, 3> R;
-    R << sigma_m*sigma_m, 0.0f, 0.0f,
-         0.0f, sigma_m*sigma_m, 0.0f,
-         0.0f, 0.0f, sigma_m*sigma_m;
+//     // Measurement noise covariance
+//     Matrix<float, 3, 3> R;
+//     R << sigma_m*sigma_m, 0.0f, 0.0f,
+//          0.0f, sigma_m*sigma_m, 0.0f,
+//          0.0f, 0.0f, sigma_m*sigma_m;
 
-    // Initial state
-    // see ftest_init()
+//     // Initial state
+//     // see ftest_init()
 
-    // Initial covariance
-    // see ftest_init()
+//     // Initial covariance
+//     // see ftest_init()
 
-    // Predict step
-    e_x = F * e_x;
-    e_P = F * e_P * F.transpose().eval() + Q;
+//     // Predict step
+//     e_x = F * e_x;
+//     e_P = F * e_P * F.transpose().eval() + Q;
 
-    // Measurement update step
-    Matrix<float, 3, 1> z;
-    z << accelerationX, accelerationY, accelerationZ;
-    Matrix<float, 3, 1> y = z - H * e_x;
-    Matrix<float, 3, 3> S = H * e_P * H.transpose().eval() + R;
-    Matrix<float, 9, 3> K = e_P * H.transpose().eval() * S.inverse();
-    e_x = e_x + K * y;
-    Matrix<float, 9, 9> tm = (Matrix<float, 9, 9>::Identity() - K * H);
-    e_P = tm * e_P * tm.transpose().eval() + K * R * K.transpose().eval();
+//     // Measurement update step
+//     Matrix<float, 3, 1> z;
+//     z << accelerationX, accelerationY, accelerationZ;
+//     Matrix<float, 3, 1> y = z - H * e_x;
+//     Matrix<float, 3, 3> S = H * e_P * H.transpose().eval() + R;
+//     Matrix<float, 9, 3> K = e_P * H.transpose().eval() * S.inverse();
+//     e_x = e_x + K * y;
+//     Matrix<float, 9, 9> tm = (Matrix<float, 9, 9>::Identity() - K * H);
+//     e_P = tm * e_P * tm.transpose().eval() + K * R * K.transpose().eval();
 
-    // Estimate of velocity is the first element of the state vector
-    //printf("V> % .9f, % .9f, % .9f, % .9f, % .9f, % .9f\n", e_x(0), e_x(1), e_x(2), e_x(3), e_x(4), e_x(5));
-    return e_x;
-}
+//     // Estimate of velocity is the first element of the state vector
+//     //printf("V> % .9f, % .9f, % .9f, % .9f, % .9f, % .9f\n", e_x(0), e_x(1), e_x(2), e_x(3), e_x(4), e_x(5));
+//     return e_x;
+// }
 
 IMU_s::euler_t IMU_s::getEulerAngles(matrix_t& _Rotation)
 {

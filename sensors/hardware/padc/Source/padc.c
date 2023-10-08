@@ -37,7 +37,7 @@ int padc_init(uint32_t fspi, uint32_t fsampling, uint clk_pin, uint data_pin, ui
     sm_config_set_in_shift(&c_sm0, false, true, __PADC_DATA_BITS);
     sm_config_set_fifo_join(&c_sm0, PIO_FIFO_JOIN_RX);
     sm_config_set_sideset_pins(&c_sm1, reset_pin);
-
+    
     pio_gpio_init(PADC_PIO, clk_pin);
     pio_gpio_init(PADC_PIO, data_pin);
     pio_gpio_init(PADC_PIO, cnv_pin);

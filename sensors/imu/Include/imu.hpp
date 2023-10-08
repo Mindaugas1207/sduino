@@ -20,7 +20,7 @@
 #include <limits>
 #include <tuple>
 #include <array>
-#include "Dense"
+//#include "Dense"
 #ifdef IMU_USE_MAG
 #define IMU_NDATA_CALIB 12
 #define IMU_NDATA 9
@@ -141,9 +141,9 @@ class IMU_s {
         bool Calibrated;
     } Magnetometer;
 #endif
-    Eigen::Matrix<float, 9, 1> e_x;
-    Eigen::Matrix<float, 9, 9> e_P;
-    Eigen::Matrix<float, 9, 1> E_X;
+    //Eigen::Matrix<float, 9, 1> e_x;
+    //Eigen::Matrix<float, 9, 9> e_P;
+    //Eigen::Matrix<float, 9, 1> E_X;
     absolute_time_t LastTimeF;
     vect_t Velocity = {0.0f,0.0f,0.0f};
     vect_t LastVelocity = {0.0f,0.0f,0.0f};
@@ -154,7 +154,7 @@ class IMU_s {
     euler_t Orientation;
     
     void ftest_init();
-    Eigen::Matrix<float, 9, 1> ftest(float accelerationX, float accelerationY, float accelerationZ, float dt, float sigma_a, float sigma_m);
+    //Eigen::Matrix<float, 9, 1> ftest(float accelerationX, float accelerationY, float accelerationZ, float dt, float sigma_a, float sigma_m);
 
     euler_t getEulerAngles(matrix_t& _Rotation);
     matrix_t getRotationMatrix(quat_t& _Quaternion);
