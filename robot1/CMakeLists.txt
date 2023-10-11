@@ -37,7 +37,7 @@ target_sources(line_follower PRIVATE
     ../motors/Source/motor_driver.cpp
     ../sensors/line_sensor/Source/line_sensor.cpp
     ../sensors/hardware/padc/Source/padc.c
-    ../sensors/hardware/encoder/Source/encoder.c
+    ../sensors/hardware/encoder/Source/encoder.cpp
     ../sensors/hardware/LED_DRIVER/Source/IS31FL3218.c
     ../sensors/hardware/I2C_MUX/Source/PI4MSD5V9540B.c
     ../sensors/port/Source/port.c

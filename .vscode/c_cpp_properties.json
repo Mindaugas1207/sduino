@@ -4,20 +4,16 @@
             "name": "Win32",
             "includePath": [
                 "${workspaceFolder}/**",
-                "C:/Users/minda/pico/Downloads/pico-sdk/src/**",
-                "${env:PICO_SDK_PATH}/**",
-                "${workspaceFolder}/build/pico-sdk/**"
+                "C:/Users/mindaugas.mikalauska/pico/pico-sdk/**"
             ],
             "defines": [
                 "_DEBUG",
                 "UNICODE",
                 "_UNICODE"
             ],
-            "windowsSdkVersion": "10.0.22000.0",
-            "compilerPath": "cl.exe",
             "cStandard": "c17",
-            "cppStandard": "c++17",
-            "intelliSenseMode": "windows-msvc-x64",
+            "cppStandard": "gnu++17",
+            "intelliSenseMode": "windows-gcc-arm",
             "configurationProvider": "ms-vscode.cmake-tools"
         }
     ],

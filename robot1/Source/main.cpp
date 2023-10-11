@@ -3,11 +3,7 @@
  */
 
 #include "main.hpp"
-#include "line_follower.hpp"
-#include <stdio.h>
-#include "pico/stdlib.h"
-#include "hardware/pio.h"
-#include "encoder.h"
+
 //LineFollower_s LineFollower;
 
 constexpr auto MOTOR_MAX_RPM = 2800; //2800, 4300
@@ -92,32 +88,7 @@ void setDuty(float _Duty, uint pinA, uint pinB)
     pwm_set_gpio_level(pinB, val2);
 }
 
-// Initialise frequency pulse counter
-void encoder_init(uint pin, uint pwm)
-{
-    gpio_set_function(pin, GPIO_FUNC_PWM);
-    pwm_config cfg = pwm_get_default_config();
-    pwm_config_set_clkdiv_mode(&cfg, PWM_DIV_B_RISING);
-    pwm_config_set_clkdiv_int_frac(&cfg, 1, 0);
-    pwm_config_set_wrap(&cfg, 0xFFFF);
-    pwm_init(pwm, &cfg, false);
-    pwm_set_counter(pwm, 0);
-}
 
-// Start pulse counter
-void encoder_start(uint pwm)
-{
-    pwm_set_counter(pwm, 0);
-    pwm_set_enabled(pwm, true);
-}
-
-// Get pulse count
-uint encoder_read(uint pwm)
-{
-    uint value = pwm_get_counter(pwm);
-    pwm_set_counter(pwm, 0);
-    return value;
-}
 
 
 
@@ -132,33 +103,33 @@ int main()
     int new_value0, new_value1, delta0, delta1, old_value0 = 0, old_value1 = 0, per1 = 0, per2 = 0;
 
     stdio_init_all();
-    pio_add_program(pio1, &quadrature_encoder_program);
-    quadrature_encoder_program_init(pio1, 0, 23, 2, 0);
-    quadrature_encoder_program_init(pio1, 1, 1, 3, 0);
+    //pio_add_program(pio1, &quadrature_encoder_program);
+    //quadrature_encoder_program_init(pio1, 0, 23, 2, 0);
+    //quadrature_encoder_program_init(pio1, 1, 1, 3, 0);
 
     motor_init(DRIVE1_MOTOR_PINA, DRIVE1_MOTOR_PINB, DRIVE1_MOTOR_PWMA, DRIVE1_MOTOR_PWMB);
     motor_init(DRIVE2_MOTOR_PINA, DRIVE2_MOTOR_PINB, DRIVE2_MOTOR_PWMA, DRIVE2_MOTOR_PWMB);
 
-    encoder_init(DRIVE1_ENCODER_PINA, DRIVE1_ENCODER_PWM);
-    encoder_init(DRIVE2_ENCODER_PINA, DRIVE2_ENCODER_PWM);
+    //encoder_init(DRIVE1_ENCODER_PINA, DRIVE1_ENCODER_PWM);
+    //encoder_init(DRIVE2_ENCODER_PINA, DRIVE2_ENCODER_PWM);
 
     setDuty(1.0f, DRIVE1_MOTOR_PINA, DRIVE1_MOTOR_PINB);
     setDuty(1.0f, DRIVE2_MOTOR_PINA, DRIVE2_MOTOR_PINB);
 
-    encoder_start(DRIVE1_ENCODER_PWM);
-    encoder_start(DRIVE2_ENCODER_PWM);
+    //encoder_start(DRIVE1_ENCODER_PWM);
+    //encoder_start(DRIVE2_ENCODER_PWM);
     absolute_time_t upTime = get_absolute_time();
     
     while (1) {
         absolute_time_t TimeNow = get_absolute_time();
         if (to_us_since_boot(get_absolute_time()) > to_us_since_boot(upTime))
         {
-            per1 = encoder_read(DRIVE1_ENCODER_PWM);
-            per2 = encoder_read(DRIVE2_ENCODER_PWM);
+            //per1 = encoder_read(DRIVE1_ENCODER_PWM);
+            //per2 = encoder_read(DRIVE2_ENCODER_PWM);
 
 
-            new_value0 = quadrature_encoder_get_count(pio1, 0);
-            new_value1 = quadrature_encoder_get_count(pio1, 1);
+            //new_value0 = quadrature_encoder_get_count(pio1, 0);
+            //new_value1 = quadrature_encoder_get_count(pio1, 1);
             delta0 = new_value0 - old_value0;
             old_value0 = new_value0;
             delta1 = new_value1 - old_value1;
