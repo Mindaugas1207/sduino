@@ -287,6 +287,97 @@ void sduino_adc_read()
     //printf("AIN0 = %.9f, AIN1 = %.9f, AIN2 = %.9f, AIN3 = %.9f, AIN4 = %.9f, TC = %.02f C\n", Volts[0], Volts[1], Volts[2]*7.2397, Volts[3], Volts[4], temperature);
 }
 
+SENSORX_VL53L0X_t dev_vlx;
+uint16_t vlx_measurement = 0;
+bool vlx_ongoing = false;
+// volatile bool vlx_sync_int = true;
+// #define VLX_INT_PIN 1
+// static void vlx_hw_callback(uint gpio, uint32_t events)
+// {
+//     vlx_sync_int = true;
+// }
+// inline bool vlx_hw_new_data_available()
+// {
+//     return vlx_sync_int || gpio_get(VLX_INT_PIN);
+// }
+// inline void vlx_hw_start()
+// {
+//     gpio_set_irq_enabled(VLX_INT_PIN, GPIO_IRQ_EDGE_RISE, true);
+//     vlx_sync_int = true;
+// }
+// inline void vlx_hw_stop()
+// {
+//     gpio_set_irq_enabled(VLX_INT_PIN, GPIO_IRQ_EDGE_RISE, false);
+// }
+void vlx_handle();
+void vlx_getMeasurement();
+void vlx_handle()
+{
+    if (!vlx_ongoing)
+    {
+        SENSORX_VL53L0X_StartMeasurement(&dev_vlx);
+        vlx_ongoing = true;
+    }
+    else
+    {
+        if (SENSORX_VL53L0X_PollMeasurementDataReady(&dev_vlx) == 1)
+        {
+            vlx_ongoing = false;
+            vlx_getMeasurement();
+        }
+    }
+
+
+}
+
+void vlx_getMeasurement()
+{
+    int error = SENSORX_OK;
+    VL53L0X_RangingMeasurementData_t data;
+    error = SENSORX_VL53L0X_GetMeasurementData(&dev_vlx, &data);
+    error = SENSORX_VL53L0X_ClearInterrupt(&dev_vlx);
+    if(error == SENSORX_OK)
+    {
+        //SENSORX_VL53L0X_PrintMeasurementData(&dev_vlx, data);
+        if(data.RangeStatus == VL53L0X_RANGESTATUS_RANGEVALID)
+        {
+            vlx_measurement = data.RangeMilliMeter;
+        }
+        else
+        {
+            vlx_measurement = 10000;
+        }
+    }
+    else
+    {
+        vlx_measurement = 12000;
+    }
+}
+
+bool vlx_init()
+{
+    vlx_measurement = 20000;
+    if (SENSORX_VL53L0X_Init(&dev_vlx, &i2c_port, PORT_CHANNEL_1, VL53L0X_DEFAULT_ADDRESS, 0) != SENSORX_OK) return false;
+    if (SENSORX_VL53L0X_GetConfig(&dev_vlx) != SENSORX_OK) return false;
+    if (SENSORX_VL53L0X_RunCalibrations(&dev_vlx, VL53L0X_CALIBRATE_SPADS) != SENSORX_OK) return false;
+    if (SENSORX_VL53L0X_RunCalibrations(&dev_vlx, VL53L0X_CALIBRATE_REF) != SENSORX_OK) return false;
+    dev_vlx.config.RANGING_MODE = VL53L0X_DEVICEMODE_CONTINUOUS_RANGING;
+
+    //dev_vlx.config.RANGING_MODE = VL53L0X_DEVICEMODE_SINGLE_RANGING;
+    //inst->config.RANGING_MODE = VL53L0X_DEVICEMODE_CONTINUOUS_RANGING;
+    if (SENSORX_VL53L0X_SetConfig(&dev_vlx) != SENSORX_OK) return false;
+    if (SENSORX_VL53L0X_PrintAll(&dev_vlx) != SENSORX_OK) return false;
+
+    // gpio_init(VLX_INT_PIN);
+    // gpio_set_dir(VLX_INT_PIN, GPIO_IN);
+    // gpio_set_irq_enabled_with_callback(VLX_INT_PIN, GPIO_IRQ_EDGE_RISE, true, &vlx_hw_callback);
+    // vlx_hw_start();
+    if (SENSORX_VL53L0X_StartMeasurement(&dev_vlx) != SENSORX_OK) return false;
+    vlx_ongoing = true;
+    
+    return true;
+}
+
 void ESC_Arm()
 {
 
@@ -508,22 +599,31 @@ void LineFollower_s::init(void)
     //     }
     // }
 
+    if (vlx_init() == false)
+    {
+        printf("DBG:VLX_INIT->FAIL\n");
+        while (true) { tight_loop_contents(); }
+    }
+    //while(1){vlx_handle();}
+
+    if(!IMU.init(&i2c_port, &spi_port)) {
+       printf("DBG:IMU_INIT->FAIL\n");
+       while (true) { tight_loop_contents(); }
+    }
+    IMU.startAsyncProcess();
+    printf("IMU START!\n");
+    //while(1){IMU.runAsyncProcess(get_absolute_time());}
+
     
     if (LineSensor.init(&LineSensorHW) == LINE_SENSOR_ERROR) {
        printf("DBG:LINE_SENSOR_INIT->FAIL\n");
        while (true) { tight_loop_contents(); }
     }
     printf("LS INIT!\n");
-    if(!IMU.init(&i2c_port, &spi_port)) {
-       printf("DBG:IMU_INIT->FAIL\n");
-       while (true) { tight_loop_contents(); }
-    }
-    printf("IMU INIT!\n");
+    
     load();
     printf("LOAD!\n");
-
-    IMU.startAsyncProcess();
-    printf("IMU START!\n");
+    
     stop();
     wakeup();
     sleep();

@@ -3,8 +3,12 @@
  */
 
 #include "main.hpp"
-
-//LineFollower_s LineFollower;
+#include "line_follower.hpp"
+#include <stdio.h>
+#include "pico/stdlib.h"
+#include "hardware/pio.h"
+#include "encoder.h"
+LineFollower_s LineFollower;
 
 constexpr auto MOTOR_MAX_RPM = 2800; //2800, 4300
 constexpr auto ENCODER_REDUCTION = 5.4;//1:5.4, 4.4
@@ -94,55 +98,55 @@ void setDuty(float _Duty, uint pinA, uint pinB)
 
 int main()
 {
-    //LineFollower.init();
+    LineFollower.init();
 
-    // while (true)
-    // {
-    //     //LineFollower.run();
-    // }
-    int new_value0, new_value1, delta0, delta1, old_value0 = 0, old_value1 = 0, per1 = 0, per2 = 0;
-
-    stdio_init_all();
-    //pio_add_program(pio1, &quadrature_encoder_program);
-    //quadrature_encoder_program_init(pio1, 0, 23, 2, 0);
-    //quadrature_encoder_program_init(pio1, 1, 1, 3, 0);
-
-    motor_init(DRIVE1_MOTOR_PINA, DRIVE1_MOTOR_PINB, DRIVE1_MOTOR_PWMA, DRIVE1_MOTOR_PWMB);
-    motor_init(DRIVE2_MOTOR_PINA, DRIVE2_MOTOR_PINB, DRIVE2_MOTOR_PWMA, DRIVE2_MOTOR_PWMB);
-
-    //encoder_init(DRIVE1_ENCODER_PINA, DRIVE1_ENCODER_PWM);
-    //encoder_init(DRIVE2_ENCODER_PINA, DRIVE2_ENCODER_PWM);
-
-    setDuty(1.0f, DRIVE1_MOTOR_PINA, DRIVE1_MOTOR_PINB);
-    setDuty(1.0f, DRIVE2_MOTOR_PINA, DRIVE2_MOTOR_PINB);
-
-    //encoder_start(DRIVE1_ENCODER_PWM);
-    //encoder_start(DRIVE2_ENCODER_PWM);
-    absolute_time_t upTime = get_absolute_time();
-    
-    while (1) {
-        absolute_time_t TimeNow = get_absolute_time();
-        if (to_us_since_boot(get_absolute_time()) > to_us_since_boot(upTime))
-        {
-            //per1 = encoder_read(DRIVE1_ENCODER_PWM);
-            //per2 = encoder_read(DRIVE2_ENCODER_PWM);
-
-
-            //new_value0 = quadrature_encoder_get_count(pio1, 0);
-            //new_value1 = quadrature_encoder_get_count(pio1, 1);
-            delta0 = new_value0 - old_value0;
-            old_value0 = new_value0;
-            delta1 = new_value1 - old_value1;
-            old_value1 = new_value1;
-
-            printf("p0 %8d, d0 %6d, p1 %8d, d1 %6d, per1%8d, per2%8d\n", new_value0, delta0, new_value1, delta1, per1, per2);
-            upTime = make_timeout_time_ms(250);
-        }
-        // note: thanks to two's complement arithmetic delta will always
-        // be correct even when new_value wraps around MAXINT / MININT
-        
-        //sleep_ms(100);
+    while (true)
+    {
+        LineFollower.run();
     }
+    // int new_value0, new_value1, delta0, delta1, old_value0 = 0, old_value1 = 0, per1 = 0, per2 = 0;
+
+    // stdio_init_all();
+    // pio_add_program(pio1, &quadrature_encoder_program);
+    // quadrature_encoder_program_init(pio1, 0, 23, 2, 0);
+    // quadrature_encoder_program_init(pio1, 1, 1, 3, 0);
+
+    // motor_init(DRIVE1_MOTOR_PINA, DRIVE1_MOTOR_PINB, DRIVE1_MOTOR_PWMA, DRIVE1_MOTOR_PWMB);
+    // motor_init(DRIVE2_MOTOR_PINA, DRIVE2_MOTOR_PINB, DRIVE2_MOTOR_PWMA, DRIVE2_MOTOR_PWMB);
+
+    // encoder_init(DRIVE1_ENCODER_PINA, DRIVE1_ENCODER_PWM);
+    // encoder_init(DRIVE2_ENCODER_PINA, DRIVE2_ENCODER_PWM);
+
+    // setDuty(1.0f, DRIVE1_MOTOR_PINA, DRIVE1_MOTOR_PINB);
+    // setDuty(1.0f, DRIVE2_MOTOR_PINA, DRIVE2_MOTOR_PINB);
+
+    // encoder_start(DRIVE1_ENCODER_PWM);
+    // encoder_start(DRIVE2_ENCODER_PWM);
+    // absolute_time_t upTime = get_absolute_time();
+    
+    // while (1) {
+    //     absolute_time_t TimeNow = get_absolute_time();
+    //     if (to_us_since_boot(get_absolute_time()) > to_us_since_boot(upTime))
+    //     {
+    //         per1 = encoder_read(DRIVE1_ENCODER_PWM);
+    //         per2 = encoder_read(DRIVE2_ENCODER_PWM);
+
+
+    //         new_value0 = quadrature_encoder_get_count(pio1, 0);
+    //         new_value1 = quadrature_encoder_get_count(pio1, 1);
+    //         delta0 = new_value0 - old_value0;
+    //         old_value0 = new_value0;
+    //         delta1 = new_value1 - old_value1;
+    //         old_value1 = new_value1;
+
+    //         printf("p0 %8d, d0 %6d, p1 %8d, d1 %6d, per1%8d, per2%8d\n", new_value0, delta0, new_value1, delta1, per1, per2);
+    //         upTime = make_timeout_time_ms(250);
+    //     }
+    //     // note: thanks to two's complement arithmetic delta will always
+    //     // be correct even when new_value wraps around MAXINT / MININT
+        
+    //     //sleep_ms(100);
+    // }
 
     return 0;
 }
