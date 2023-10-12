@@ -34,6 +34,7 @@ int SENSORX_VL53L0X_RunCalibrations(SENSORX_VL53L0X_t *sensor, uint32_t requestF
 int SENSORX_VL53L0X_GetConfig(SENSORX_VL53L0X_t *sensor);
 int SENSORX_VL53L0X_SetConfig(SENSORX_VL53L0X_t *sensor);
 int SENSORX_VL53L0X_PrintAll(SENSORX_VL53L0X_t *sensor);
+int SENSORX_VL53L0X_ClearInterrupt(SENSORX_VL53L0X_t *sensor);
 //
 //uint8_t SENSORX_Start(SENSORx_t *device);
 //uint8_t SENSORX_Stop(SENSORx_t *device);

@@ -14,6 +14,7 @@
 #include "line_sensor.hpp"
 #include "imu.hpp"
 #include "pid.hpp"
+#include "sensorx.h"
 
 #include "functional"
 #include <algorithm>
