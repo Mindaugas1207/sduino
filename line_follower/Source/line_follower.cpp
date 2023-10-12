@@ -25,10 +25,10 @@ void sduino_adc_init()
 
 #define DRV_R 473.5f
 constexpr auto ESC_PWM_PIN = 26U; //pwm5 A
-constexpr auto MOTOR_B_ENCODER_A_PIN = 1U; //pwm0 b
-constexpr auto MOTOR_B_ENCODER_B_PIN = 3U; //pwm1 b
-constexpr auto MOTOR_A_ENCODER_A_PIN = 24U; // reik pakeist i 23 pwm3 b
-constexpr auto MOTOR_A_ENCODER_B_PIN = 25U; //pwm4 b reik pakeist i 24 pwm4 a
+constexpr auto MOTOR_B_ENCODER_A_PIN = 23U; //pwm0 b
+constexpr auto MOTOR_B_ENCODER_B_PIN = 24U; //pwm1 b
+constexpr auto MOTOR_A_ENCODER_A_PIN = 1U; // reik pakeist i 23 pwm3 b
+constexpr auto MOTOR_A_ENCODER_B_PIN = 2U; //pwm4 b reik pakeist i 24 pwm4 a
 constexpr auto MOTOR_B_ENCODER_PINS_MASK = 1U << MOTOR_B_ENCODER_A_PIN | 1U << MOTOR_B_ENCODER_B_PIN;
 constexpr auto MOTOR_A_ENCODER_PINS_MASK = 1U << MOTOR_A_ENCODER_A_PIN | 1U << MOTOR_A_ENCODER_B_PIN;
 constexpr auto MOTOR_MIN_RPM = 260;
@@ -291,7 +291,7 @@ SENSORX_VL53L0X_t dev_vlx;
 uint16_t vlx_measurement = 0;
 bool vlx_ongoing = false;
 // volatile bool vlx_sync_int = true;
-// #define VLX_INT_PIN 1
+// #define VLX_INT_PIN 25
 // static void vlx_hw_callback(uint gpio, uint32_t events)
 // {
 //     vlx_sync_int = true;
@@ -530,7 +530,7 @@ void LineFollower_s::init(void)
 
     DriveA.init(SDUINO_INTERNAL_DRV_A_IN1_PIN, SDUINO_INTERNAL_DRV_A_IN2_PIN);
     DriveB.init(SDUINO_INTERNAL_DRV_B_IN1_PIN, SDUINO_INTERNAL_DRV_B_IN2_PIN);
-    ESC.init(23);//ESC_PWM_PIN
+    ESC.init(29);//ESC_PWM_PIN
     //sduino_adc_init();
     if (port_spi_init(&spi_port, spi_internal) == PORT_ERROR) printf("DBG:PORT_SPI_INIT->FAIL\n");
     printf("DBG:SPI INIT\n");

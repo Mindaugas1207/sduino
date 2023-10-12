@@ -16,10 +16,10 @@ extern "C" {
 #include "pico/util/queue.h"
 #include "padc.pio.h"
 
-#define PADC_DEFAULT_CLK_PIN 6
+#define PADC_DEFAULT_CLK_PIN 3
 #define PADC_DEFAULT_CNV_PIN 5
 #define PADC_DEFAULT_DATA_PIN 4
-#define PADC_DEFAULT_RESET_PIN 2
+#define PADC_DEFAULT_RESET_PIN 6
 
 #define PADC_BUFFER_SIZE __PADC_CNV_COUNT
 #define PADC_FIFO_SIZE 10

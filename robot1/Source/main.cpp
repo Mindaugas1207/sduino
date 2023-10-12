@@ -7,7 +7,6 @@
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "hardware/pio.h"
-#include "encoder.h"
 LineFollower_s LineFollower;
 
 constexpr auto MOTOR_MAX_RPM = 2800; //2800, 4300

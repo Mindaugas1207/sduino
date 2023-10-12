@@ -15,6 +15,7 @@
 #include "imu.hpp"
 #include "pid.hpp"
 #include "sensorx.h"
+#include "esc.hpp"
 
 #include "functional"
 #include <algorithm>

@@ -150,7 +150,12 @@ static inline bool line_sensor_hw_read(uint _output[LINE_SENSOR_HW_NUM_SENSORS])
     // sleep_ms(100);
     for (int i = 0; i < LINE_SENSOR_HW_NUM_SENSORS; i++)
         _output[PADC_TO_POS_MAP[i]] = buffer[i*2 + 1];
-    
+    // printf("%d | %d | %d | %d | %d | %d | %d / %d \\ %d | %d | %d | %d | %d | %d | %d |<\n",
+    //     _output[0],  _output[1],  _output[2],  _output[3],  _output[4], _output[5],
+    //     _output[6],  _output[7],  _output[8],  _output[9],  _output[10], _output[11],
+    //     _output[12], _output[13], _output[14]
+    // );
+    // sleep_ms(100);
     return true;
 
      //00      | 01      | 02      | 03      | 04      | 05      | 06      | 07      | 08      | 09      | 10      | 11      | 12      | 13      | 14      | 15      |
@@ -170,12 +175,7 @@ static inline bool line_sensor_hw_read(uint _output[LINE_SENSOR_HW_NUM_SENSORS])
     // printf("%d %d\n",
     //     buffer[28], buffer[29]
     // );
-    // printf("%d | %d | %d | %d | %d | %d | %d / %d \\ %d | %d | %d | %d | %d | %d | %d |<\n",
-    //     buffer[0],  buffer[1],  buffer[2],  buffer[3],  buffer[4], buffer[5],
-    //     buffer[6],  buffer[7],  buffer[8],  buffer[9],  buffer[10], buffer[11],
-    //     buffer[12], buffer[13], buffer[14]
-    // );
-    // sleep_ms(100);
+    
     
     
     //00  01  | 02  03  | 04  05  | 06  07  | 08  09  | 10  11  | 12  13  | 14  15  | 16  17  | 18  19  | 20  21  | 22  23  | 24  25  | 26  27  | 28  29  | 30  31  |
