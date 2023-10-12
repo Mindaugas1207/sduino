@@ -52,8 +52,18 @@ void Sensor_s::calibrate(uint & _Input)
 std::tuple<float, bool> Sensor_s::compute(uint & _Input)
 {
     Raw = std::clamp(_Input, Min, Max);
+
+    //if (Inverted) Raw = Max - Raw;
+
     Value = ((float)Raw - Offset) / Span;
+
+    if (Inverted) 
+    {
+        Value = 1.0 - Value;
+    }
+
     Detected = Value > ThresholdHigh ? true : (Value < ThresholdLow ? false : Detected);
+
     return {Value, Detected};
 }
 
@@ -325,6 +335,27 @@ std::tuple<float, bool> LineSensor_s::compute(absolute_time_t _TimeNow, std::arr
             _ClosestEdge = i;
             _ClosestDistance = _EdgeDistance;
         }
+    }
+
+    if (isWhite && _EdgeCount > LINE_SENSOR_NUM_SENSORS - 4)
+    {
+        isWhite = false;
+        for(auto i = LINE_SENSOR_FIRST_INDEX; i <= LINE_SENSOR_LAST_INDEX; i++)
+        {
+            if (Sensors[i].isWhite()) Sensors[i].setBlack();
+        }
+        printf("Black\n");
+        return {Position, Detected};
+    }
+    else if (!isWhite && _EdgeCount > LINE_SENSOR_NUM_SENSORS - 4)
+    {
+        isWhite = true;
+        for(auto i = LINE_SENSOR_FIRST_INDEX; i <= LINE_SENSOR_LAST_INDEX; i++)
+        {
+            if (!Sensors[i].isWhite()) Sensors[i].setWhite();
+        }
+        printf("White\n");
+        return {Position, Detected};
     }
 
 

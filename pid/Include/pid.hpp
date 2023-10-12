@@ -130,14 +130,16 @@ public:
         {
             Error = SetPoint - _Input;
             //Integral
-            Integral = std::clamp(Integral, -IntegralLimit, IntegralLimit);// + std::clamp(Error, -IntegralRateLimit, IntegralRateLimit)
-        
+            float tint = Error * IntegralTimeReciprocal * DeltaTime;
+            Integral = std::clamp(Integral + tint, -IntegralLimit, IntegralLimit);// + std::clamp(Error, -IntegralRateLimit, IntegralRateLimit)
+
             //Derivative
-            Derivative = (1.0f - DerivativeCutoff) * Derivative + DerivativeCutoff * (_Input - LastInput); //Derivative on measurement, with moving average filter
+            float dint = DerivativeCutoff * (_Input - LastInput) * DerivativeTime / DeltaTime;
+            Derivative = (1.0f - DerivativeCutoff) * Derivative + dint; //Derivative on measurement, with moving average filter
             //PID
             Output = Error;
-            Output += DerivativeTime != 0.0f ? Derivative * DerivativeTime / DeltaTime : 0.0f;
-            Output += IntegralTimeReciprocal != 0.0f ? Integral * IntegralTimeReciprocal * DeltaTime : 0.0f;
+            Output += DerivativeTime != 0.0f ? Derivative : 0.0f;
+            Output += IntegralTimeReciprocal != 0.0f ? Integral : 0.0f;
             Output *= Gain;
             //Output limit
             Output = std::clamp(Output, -OutputLimit, OutputLimit);

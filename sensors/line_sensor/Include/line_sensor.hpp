@@ -76,6 +76,7 @@ class Sensor_s {
     uint Min;
     uint Max;
     bool Detected;
+    bool Inverted;
 public:
     typedef Config_s Config_t;
 
@@ -94,6 +95,10 @@ public:
 
     void startCalibration(void);
     void calibrate(uint & _Input);
+
+    void setBlack() { Inverted = false;}
+    void setWhite() { Inverted = true;}
+    bool isWhite() { return Inverted; }
 	
     std::tuple<float, bool> compute(uint & _Input);
 
@@ -173,6 +178,7 @@ private:
     bool Calibrated;
     bool DisplayAnalog;
     bool LiveUpdate;
+    bool isWhite = false;
 
     absolute_time_t DBG_PrintTimeout;
 public:

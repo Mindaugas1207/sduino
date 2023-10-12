@@ -5,6 +5,7 @@ include_directories("${SDUINO_PROJECT_PATH}/eigen/Eigen/src")
 include_directories("${SDUINO_PROJECT_PATH}/robot1/Include")
 include_directories("${SDUINO_PROJECT_PATH}/line_follower/Include")
 include_directories("${SDUINO_PROJECT_PATH}/motors/Include")
+include_directories("${SDUINO_PROJECT_PATH}/ESC/Include")
 include_directories("${SDUINO_PROJECT_PATH}/sensors/sensorx/Include")
 include_directories("${SDUINO_PROJECT_PATH}/sensors/port/Include")
 include_directories("${SDUINO_PROJECT_PATH}/sensors/line_sensor/Include")
@@ -35,6 +36,7 @@ target_sources(line_follower PRIVATE
     ../interface/Source/interface.cpp
     ../line_follower/Source/line_follower.cpp
     ../motors/Source/motor_driver.cpp
+    ../ESC/Source/esc.cpp
     ../sensors/line_sensor/Source/line_sensor.cpp
     ../sensors/hardware/padc/Source/padc.c
     ../sensors/hardware/encoder/Source/encoder.cpp

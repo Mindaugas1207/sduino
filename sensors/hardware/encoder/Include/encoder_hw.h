@@ -87,15 +87,7 @@ void encoder_read(encoder_hw_inst_t *inst)
 
 
         //new_value0 = quadrature_encoder_get_count(pio1, 0);
-        //new_value1 = quadrature_encoder_get_count(pio1, 1);
-        delta0 = new_value0 - old_value0;
-        old_value0 = new_value0;
-        delta1 = new_value1 - old_value1;
-        old_value1 = new_value1;
-
-        printf("p0 %8d, d0 %6d, p1 %8d, d1 %6d, per1%8d, per2%8d\n", new_value0, delta0, new_value1, delta1, per1, per2);
-        upTime = make_timeout_time_ms(250);
-    // note: thanks to two's complement arithmetic delta will always
+        //new_value1 = quadrature_encoder_get_count(pio1, 1);metic delta will always
     // be correct even when new_value wraps around MAXINT / MININT
     
     //sleep_ms(100);
