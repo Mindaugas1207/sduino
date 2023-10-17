@@ -112,6 +112,14 @@ class LineFollower_s
         VAR_PID0_DERIVATIVE_TIME          = 0x0264,
         VAR_PID0_DERIVATIVE_CUTOFF        = 0x0265,
         VAR_PID0_DEADZONE                 = 0x0266,
+        /*  PID1 variables                = 0x0260,*/
+        VAR_PID1_GAIN                     = 0x0280,
+        VAR_PID1_INTEGRAL_TIME            = 0x0281,
+        VAR_PID1_INTEGRAL_LIMIT           = 0x0282,
+        VAR_PID1_INTEGRAL_RATE_LIMIT      = 0x0283,
+        VAR_PID1_DERIVATIVE_TIME          = 0x0284,
+        VAR_PID1_DERIVATIVE_CUTOFF        = 0x0285,
+        VAR_PID1_DEADZONE                 = 0x0286,
 
         CMD_FIRST                         = CMD_NONE,
         CMD_LAST                          = CMD_LINE_WAKEUP,
@@ -130,6 +138,7 @@ class LineFollower_s
         MotorDriver_s::Config_t DriveA;
         MotorDriver_s::Config_t DriveB;
         PID_s::Config_t PID_Drives;
+        PID_s::Config_t PID_Tracking;
         float ForwardSpeed;
         float EscSpeed;
         float SteeringGain;
@@ -183,7 +192,16 @@ public:
     void computeControl(absolute_time_t _TimeNow);
 
     void motorControl(absolute_time_t _TimeNow);
-
+    float ph = 0, LastFrameHeading = 0, pathHeading = 0;
+    bool doManuver = false;
+    int manuverStep = 0;
+    absolute_time_t PathTime;
+    absolute_time_t vlxTime;
+    bool vlx_start = false;
+    long step_counterA = 0;
+    long step_counterB = 0;
+    bool manuver_done = false;
+    //float LineFollower_s::computePathHeading(float _FrameHeading, bool lock);
     // #define xs(x) __XSTRING(x)
 
     // #define STRINGIFY_IMPL(s) #s

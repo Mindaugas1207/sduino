@@ -337,26 +337,26 @@ std::tuple<float, bool> LineSensor_s::compute(absolute_time_t _TimeNow, std::arr
         }
     }
 
-    if (isWhite && _EdgeCount > LINE_SENSOR_NUM_SENSORS - 4)
-    {
-        isWhite = false;
-        for(auto i = LINE_SENSOR_FIRST_INDEX; i <= LINE_SENSOR_LAST_INDEX; i++)
-        {
-            if (Sensors[i].isWhite()) Sensors[i].setBlack();
-        }
-        printf("Black\n");
-        return {Position, Detected};
-    }
-    else if (!isWhite && _EdgeCount > LINE_SENSOR_NUM_SENSORS - 4)
-    {
-        isWhite = true;
-        for(auto i = LINE_SENSOR_FIRST_INDEX; i <= LINE_SENSOR_LAST_INDEX; i++)
-        {
-            if (!Sensors[i].isWhite()) Sensors[i].setWhite();
-        }
-        printf("White\n");
-        return {Position, Detected};
-    }
+    // if (isWhite && _EdgeCount > LINE_SENSOR_NUM_SENSORS - 4)
+    // {
+    //     isWhite = false;
+    //     for(auto i = LINE_SENSOR_FIRST_INDEX; i <= LINE_SENSOR_LAST_INDEX; i++)
+    //     {
+    //         if (Sensors[i].isWhite()) Sensors[i].setBlack();
+    //     }
+    //     printf("Black\n");
+    //     return {Position, Detected};
+    // }
+    // else if (!isWhite && _EdgeCount > LINE_SENSOR_NUM_SENSORS - 4)
+    // {
+    //     isWhite = true;
+    //     for(auto i = LINE_SENSOR_FIRST_INDEX; i <= LINE_SENSOR_LAST_INDEX; i++)
+    //     {
+    //         if (!Sensors[i].isWhite()) Sensors[i].setWhite();
+    //     }
+    //     printf("White\n");
+    //     return {Position, Detected};
+    // }
 
 
     // printf("%d | %d | %d | %d | %d | %d | %d / %d \\ %d | %d | %d | %d | %d | %d | %d |<\n",

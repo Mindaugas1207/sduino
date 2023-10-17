@@ -28,6 +28,7 @@
 	<button class="tablinks" onclick="switchTab(event, 'LINE')">LINE</button>
 	<button class="tablinks" onclick="switchTab(event, 'DRIVES')">DRIVES</button>
 	<button class="tablinks" onclick="switchTab(event, 'PID0')">PID ENC</button>
+	<button class="tablinks" onclick="switchTab(event, 'PID1')">PID tracking</button>
 </div>
 <div id="COMMON" class="tabcontent">
 	<div class="range-wrap" id="100">
@@ -75,6 +76,20 @@
 	<div class="range-wrap" id="109">
 		<div class="column left" style="text-align:left; background-color:Teal"><button class="btnpm">-0.1</button><button class="btnpm">-0.01</button><button class="btnpm">-0.001</button></div>
 		<div class="column middle" style="text-align:center; background-color:Teal"><span class ="label">TURN K BIAS</span></div>
+		<div class="column right" style="text-align:right; background-color:Teal"><button class="btnpm">+0.001</button><button class="btnpm">+0.01</button><button class="btnpm">+0.1</button></div>
+		<input type="range" class="range" min="0" max="5" value="0" step="0.001">
+		<output class="bubble"></output>
+	</div>
+	<div class="range-wrap" id="105">
+		<div class="column left" style="text-align:left; background-color:Teal"><button class="btnpm">-0.1</button><button class="btnpm">-0.01</button><button class="btnpm">-0.001</button></div>
+		<div class="column middle" style="text-align:center; background-color:Teal"><span class ="label">MANUVER GAIN</span></div>
+		<div class="column right" style="text-align:right; background-color:Teal"><button class="btnpm">+0.001</button><button class="btnpm">+0.01</button><button class="btnpm">+0.1</button></div>
+		<input type="range" class="range" min="0" max="5" value="0" step="0.001">
+		<output class="bubble"></output>
+	</div>
+	<div class="range-wrap" id="10B">
+		<div class="column left" style="text-align:left; background-color:Teal"><button class="btnpm">-0.1</button><button class="btnpm">-0.01</button><button class="btnpm">-0.001</button></div>
+		<div class="column middle" style="text-align:center; background-color:Teal"><span class ="label">MANUVER K BIAS</span></div>
 		<div class="column right" style="text-align:right; background-color:Teal"><button class="btnpm">+0.001</button><button class="btnpm">+0.01</button><button class="btnpm">+0.1</button></div>
 		<input type="range" class="range" min="0" max="5" value="0" step="0.001">
 		<output class="bubble"></output>
@@ -234,21 +249,21 @@
 		<div class="column left" style="text-align:left; background-color:Teal"><button class="btnpm">-0.1</button><button class="btnpm">-0.01</button><button class="btnpm">-0.001</button></div>
 		<div class="column middle" style="text-align:center; background-color:Teal"><span class ="label">GAIN</span></div>
 		<div class="column right" style="text-align:right; background-color:Teal"><button class="btnpm">+0.001</button><button class="btnpm">+0.01</button><button class="btnpm">+0.1</button></div>
-		<input type="range" class="range" min="0" max="3" value="0" step="0.001">
+		<input type="range" class="range" min="0" max="10" value="0" step="0.001">
 		<output class="bubble"></output>
 	</div>
 	<div class="range-wrap" id="261">
-		<div class="column left" style="text-align:left; background-color:Teal"><button class="btnpm">-0.1</button><button class="btnpm">-0.01</button><button class="btnpm">-0.001</button></div>
+		<div class="column left" style="text-align:left; background-color:Teal"><button class="btnpm">-0.01</button><button class="btnpm">-0.001</button><button class="btnpm">-0.0001</button></div>
 		<div class="column middle" style="text-align:center; background-color:Teal"><span class ="label">INTEGRAL TIME</span></div>
-		<div class="column right" style="text-align:right; background-color:Teal"><button class="btnpm">+0.001</button><button class="btnpm">+0.01</button><button class="btnpm">+0.1</button></div>
-		<input type="range" class="range" min="0" max="1" value="0" step="0.001">
+		<div class="column right" style="text-align:right; background-color:Teal"><button class="btnpm">+0.0001</button><button class="btnpm">+0.001</button><button class="btnpm">+0.01</button></div>
+		<input type="range" class="range" min="0" max="100" value="0" step="0.000001">
 		<output class="bubble"></output>
 	</div>
 	<div class="range-wrap" id="262">
-		<div class="column left" style="text-align:left; background-color:Teal"><button class="btnpm">-10</button><button class="btnpm">-1</button></div>
+		<div class="column left" style="text-align:left; background-color:Teal"><button class="btnpm">-0.1</button><button class="btnpm">-0.01</button><button class="btnpm">-0.001</button></div>
 		<div class="column middle" style="text-align:center; background-color:Teal"><span class ="label">INTEGRAL LIMIT</span></div>
-		<div class="column right" style="text-align:right; background-color:Teal"><button class="btnpm">+1</button><button class="btnpm">+10</button></div>
-		<input type="range" class="range" min="0" max="5000" value="0" step="1">
+		<div class="column right" style="text-align:right; background-color:Teal"><button class="btnpm">+0.001</button><button class="btnpm">+0.01</button><button class="btnpm">+0.1</button></div>
+		<input type="range" class="range" min="0" max="100" value="0" step="0.001">
 		<output class="bubble"></output>
 	</div>
 	<div class="range-wrap" id="264">
@@ -266,6 +281,50 @@
 		<output class="bubble"></output>
 	</div>
 	<div class="range-wrap" id="266">
+		<div class="column left" style="text-align:left; background-color:Teal"><button class="btnpm">-0.1</button><button class="btnpm">-0.01</button></div>
+		<div class="column middle" style="text-align:center; background-color:Teal"><span class ="label">DEAD ZONE</span></div>
+		<div class="column right" style="text-align:right; background-color:Teal"><button class="btnpm">+0.01</button><button class="btnpm">+0.1</button></div>
+		<input type="range" class="range" min="0" max="0.5" value="0" step="0.001">
+		<output class="bubble"></output>
+	</div>
+</div>
+<div id="PID1" class="tabcontent">
+	<div class="range-wrap" id="280">
+		<div class="column left" style="text-align:left; background-color:Teal"><button class="btnpm">-0.1</button><button class="btnpm">-0.01</button><button class="btnpm">-0.001</button></div>
+		<div class="column middle" style="text-align:center; background-color:Teal"><span class ="label">GAIN</span></div>
+		<div class="column right" style="text-align:right; background-color:Teal"><button class="btnpm">+0.001</button><button class="btnpm">+0.01</button><button class="btnpm">+0.1</button></div>
+		<input type="range" class="range" min="0" max="10" value="0" step="0.001">
+		<output class="bubble"></output>
+	</div>
+	<div class="range-wrap" id="281">
+		<div class="column left" style="text-align:left; background-color:Teal"><button class="btnpm">-0.1</button><button class="btnpm">-0.001</button><button class="btnpm">-0.0001</button></div>
+		<div class="column middle" style="text-align:center; background-color:Teal"><span class ="label">INTEGRAL TIME</span></div>
+		<div class="column right" style="text-align:right; background-color:Teal"><button class="btnpm">+0.0001</button><button class="btnpm">+0.001</button><button class="btnpm">+0.1</button></div>
+		<input type="range" class="range" min="0" max="100" value="0" step="0.000001">
+		<output class="bubble"></output>
+	</div>
+	<div class="range-wrap" id="282">
+		<div class="column left" style="text-align:left; background-color:Teal"><button class="btnpm">-0.1</button><button class="btnpm">-0.01</button><button class="btnpm">-0.001</button></div>
+		<div class="column middle" style="text-align:center; background-color:Teal"><span class ="label">INTEGRAL LIMIT</span></div>
+		<div class="column right" style="text-align:right; background-color:Teal"><button class="btnpm">+0.001</button><button class="btnpm">+0.01</button><button class="btnpm">+0.1</button></div>
+		<input type="range" class="range" min="0" max="100" value="0" step="0.001">
+		<output class="bubble"></output>
+	</div>
+	<div class="range-wrap" id="284">
+		<div class="column left" style="text-align:left; background-color:Teal"><button class="btnpm">-0.01</button><button class="btnpm">-0.001</button><button class="btnpm">-0.0001</button></div>
+		<div class="column middle" style="text-align:center; background-color:Teal"><span class ="label">DERIVATIVE TIME</span></div>
+		<div class="column right" style="text-align:right; background-color:Teal"><button class="btnpm">+0.0001</button><button class="btnpm">+0.001</button><button class="btnpm">+0.01</button></div>
+		<input type="range" class="range" min="0" max="0.5" value="0" step="0.000001">
+		<output class="bubble"></output>
+	</div>
+	<div class="range-wrap" id="285">
+		<div class="column left" style="text-align:left; background-color:Teal"><button class="btnpm">-0.1</button><button class="btnpm">-0.01</button><button class="btnpm">-0.001</button></div>
+		<div class="column middle" style="text-align:center; background-color:Teal"><span class ="label">DERIVATIVE CUTOFF</span></div>
+		<div class="column right" style="text-align:right; background-color:Teal"><button class="btnpm">+0.001</button><button class="btnpm">+0.01</button><button class="btnpm">+0.1</button></div>
+		<input type="range" class="range" min="0" max="1" value="0" step="0.001">
+		<output class="bubble"></output>
+	</div>
+	<div class="range-wrap" id="286">
 		<div class="column left" style="text-align:left; background-color:Teal"><button class="btnpm">-0.1</button><button class="btnpm">-0.01</button></div>
 		<div class="column middle" style="text-align:center; background-color:Teal"><span class ="label">DEAD ZONE</span></div>
 		<div class="column right" style="text-align:right; background-color:Teal"><button class="btnpm">+0.01</button><button class="btnpm">+0.1</button></div>

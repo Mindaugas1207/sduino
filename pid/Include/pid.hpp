@@ -130,16 +130,20 @@ public:
         {
             Error = SetPoint - _Input;
             //Integral
-            float tint = Error * IntegralTimeReciprocal * DeltaTime;
+            float tint = IntegralTime != 0.0f ? Error * IntegralTimeReciprocal * DeltaTime : 0.0f;
             Integral = std::clamp(Integral + tint, -IntegralLimit, IntegralLimit);// + std::clamp(Error, -IntegralRateLimit, IntegralRateLimit)
 
             //Derivative
-            float dint = DerivativeCutoff * (_Input - LastInput) * DerivativeTime / DeltaTime;
+            float dint = DerivativeTime != 0.0f ? DerivativeCutoff * (_Input - LastInput) * DerivativeTime / DeltaTime : 0.0f;
             Derivative = (1.0f - DerivativeCutoff) * Derivative + dint; //Derivative on measurement, with moving average filter
+                // printf("int: %.6f, der: %.6f\n",Integral,Derivative
+                // );
+                // sleep_ms(200);
+
             //PID
             Output = Error;
-            Output += DerivativeTime != 0.0f ? Derivative : 0.0f;
-            Output += IntegralTimeReciprocal != 0.0f ? Integral : 0.0f;
+            Output += Derivative;
+            Output += Integral;
             Output *= Gain;
             //Output limit
             Output = std::clamp(Output, -OutputLimit, OutputLimit);

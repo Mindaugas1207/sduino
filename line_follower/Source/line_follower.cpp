@@ -12,6 +12,7 @@ MotorDriver_s DriveA;
 MotorDriver_s DriveB;
 PID_s PID_DriveA;
 PID_s PID_DriveB;
+PID_s PID_Tracking;
 IMU_s IMU;
 ESC_s ESC;
 
@@ -35,11 +36,16 @@ constexpr auto MOTOR_MIN_RPM = 260;
 //constexpr auto MOTOR_NOMINAL_RPM = 2800;
 //constexpr auto MOTOR_MAX_RPM = 2800;
 #ifdef MOTORDEF0
-constexpr auto MOTOR_MAX_RPM = 2800; //2800, 4300
-constexpr auto ENCODER_REDUCTION = 5.4;//1:5.4, 4.4
-constexpr auto ENCODER_PPR_HAL = 11;//11, 1? 13?
-constexpr auto ENCODER_WHEEL_DIAMETER_MM = 25;
-constexpr auto ENCODER_WHEEL_DIAMETER = 0.026;
+// constexpr auto MOTOR_MAX_RPM = 2800; //2800, 4300
+// constexpr auto ENCODER_REDUCTION = 5.4;//1:5.4, 4.4
+// constexpr auto ENCODER_PPR_HAL = 11;//11, 1? 13?
+// constexpr auto ENCODER_WHEEL_DIAMETER_MM = 25;
+// constexpr auto ENCODER_WHEEL_DIAMETER = 0.025;
+constexpr auto MOTOR_MAX_RPM = 3850; //2800, 4300
+constexpr auto ENCODER_REDUCTION = 4;//1:5.4, 4.4
+constexpr auto ENCODER_PPR_HAL = 7;//11, 1? 13?
+constexpr auto ENCODER_WHEEL_DIAMETER_MM = 22;
+constexpr auto ENCODER_WHEEL_DIAMETER = 0.022;
 #endif
 #ifdef MOTORDEF1
 constexpr auto MOTOR_MAX_RPM = 4300; //2800, 4300
@@ -63,6 +69,7 @@ constexpr auto ENCODER_PULSE_TO_MM = (float)(ENCODER_WHEEL_LENGTH_MM / ENCODER_P
 constexpr auto ENCODER_BASE_LENGTH_MM = 184;
 
 constexpr auto ENCODER_PULSE_TO_LENGTH = ENCODER_WHEEL_LENGTH / ENCODER_PPR;
+constexpr auto ENCODER_PULSE_TO_LENGTH_MM = ENCODER_WHEEL_LENGTH_MM / ENCODER_PPR;
 constexpr auto ENCODER_BASE_LENGTH = 0.184;
 
 struct EncoderData_s {
@@ -401,6 +408,7 @@ void LineFollower_s::ESC_Stop()
 void DriversStop() {
     DriveA.stop();
     DriveB.stop();
+    PID_Tracking.reset();
     PID_DriveA.reset();
     PID_DriveB.reset();
 }
@@ -408,6 +416,7 @@ void DriversStop() {
 void DriversBrake() {
     DriveA.brake();
     DriveB.brake();
+    PID_Tracking.reset();
     PID_DriveA.reset();
     PID_DriveB.reset();
 }
@@ -444,6 +453,7 @@ void LineFollower_s::start(void)
     Start = true;
     Stop = false;
     LED0.start(50, 50);
+    PID_Tracking.reset();
     PID_DriveA.reset();
     PID_DriveB.reset();
     DriversStart();
@@ -457,6 +467,7 @@ void LineFollower_s::stop(void)
     Start = false;
     Stop = true;
     LED0.start(1000, 1000);
+    PID_Tracking.reset();
     PID_DriveA.reset();
     PID_DriveB.reset();
     // MotorA.stopBeep();
@@ -475,6 +486,7 @@ void LineFollower_s::stop_error(void)
     sleep_ms(1000);
     DriversStop();
     LED0.start(100, 100);
+    PID_Tracking.reset();
     PID_DriveA.reset();
     PID_DriveB.reset();
     // MotorA.startBeep(500, 500);
@@ -599,11 +611,11 @@ void LineFollower_s::init(void)
     //     }
     // }
 
-    if (vlx_init() == false)
-    {
-        printf("DBG:VLX_INIT->FAIL\n");
-        while (true) { tight_loop_contents(); }
-    }
+    // if (vlx_init() == false)
+    // {
+    //     printf("DBG:VLX_INIT->FAIL\n");
+    //     while (true) { tight_loop_contents(); }
+    // }
     //while(1){vlx_handle();}
 
     if(!IMU.init(&i2c_port, &spi_port)) {
@@ -636,6 +648,7 @@ void LineFollower_s::save(void)
     Config.DriveA = DriveA.getConfiguration();
     Config.DriveB = DriveB.getConfiguration();
     Config.PID_Drives = PID_DriveA.getConfiguration();
+    Config.PID_Tracking = PID_Tracking.getConfiguration();
 
     Config.setLockCode(NVM_CONFG_LOCK_CODE);
     NVM.program();
@@ -655,9 +668,11 @@ void LineFollower_s::load(void)
         //Load Drivers
         DriveA.loadConfiguration(Config.DriveA);
         DriveB.loadConfiguration(Config.DriveB);
+        
         //Load PID_DriveA
         PID_DriveA.loadConfiguration(Config.PID_Drives);
         PID_DriveB.loadConfiguration(Config.PID_Drives);
+        PID_Tracking.loadConfiguration(Config.PID_Tracking);
         ESC.setSpeed(Config.EscSpeed);
         NVM_CONFIG_OK = true;
         NVM_LOAD_OK = true;
@@ -682,7 +697,9 @@ void LineFollower_s::load(void)
 
         PID_DriveA.loadConfiguration(DrivePID);
         PID_DriveB.loadConfiguration(DrivePID);
+        PID_Tracking.loadConfiguration(DrivePID);
         Config.PID_Drives = PID_DriveA.getConfiguration();
+        Config.PID_Tracking = PID_Tracking.getConfiguration();
 
         Config.DriveA = DriveA.getConfiguration();
         Config.DriveB = DriveB.getConfiguration();
@@ -809,6 +826,14 @@ std::tuple<int, float> LineFollower_s::get(int _Enum)
     case VAR_PID0_DERIVATIVE_TIME:          return {INTERFACE_GET_OK, PID_DriveA.getDerivativeTime()};
     case VAR_PID0_DERIVATIVE_CUTOFF:        return {INTERFACE_GET_OK, PID_DriveA.getDerivativeCutoff()};
     case VAR_PID0_DEADZONE:                 return {INTERFACE_GET_OK, PID_DriveA.getDeadZone()};
+    /*PID1 variables                        */
+    case VAR_PID1_GAIN:                     return {INTERFACE_GET_OK, PID_Tracking.getGain()};
+    case VAR_PID1_INTEGRAL_TIME:            return {INTERFACE_GET_OK, PID_Tracking.getIntegralTime()};
+    case VAR_PID1_INTEGRAL_LIMIT:           return {INTERFACE_GET_OK, PID_Tracking.getIntegralLimit()};
+    case VAR_PID1_INTEGRAL_RATE_LIMIT:      return {INTERFACE_GET_OK, PID_Tracking.getIntegralRateLimit()};
+    case VAR_PID1_DERIVATIVE_TIME:          return {INTERFACE_GET_OK, PID_Tracking.getDerivativeTime()};
+    case VAR_PID1_DERIVATIVE_CUTOFF:        return {INTERFACE_GET_OK, PID_Tracking.getDerivativeCutoff()};
+    case VAR_PID1_DEADZONE:                 return {INTERFACE_GET_OK, PID_Tracking.getDeadZone()};
 
     case INTERFACE_ENUM_LAST:               return {INTERFACE_GET_EOF, 0.0f};
     default:                                return {INTERFACE_GET_NOVAL, 0.0f};
@@ -887,6 +912,14 @@ int LineFollower_s::set(int _Enum, float _Value)
                                             PID_DriveB.setDerivativeCutoff(_Value);                                                         return INTERFACE_SET_OK;
     case VAR_PID0_DEADZONE:                 PID_DriveA.setDeadZone(Config.PID_Drives.DeadZone = _Value);
                                             PID_DriveB.setDeadZone(_Value);                                                                 return INTERFACE_SET_OK;
+    /*PID1 variables                                                                                                                             */
+    case VAR_PID1_GAIN:                     PID_Tracking.setGain(Config.PID_Tracking.Gain = _Value);                                            return INTERFACE_SET_OK;
+    case VAR_PID1_INTEGRAL_TIME:            PID_Tracking.setIntegralTime(Config.PID_Tracking.IntegralTime = _Value);                            return INTERFACE_SET_OK;
+    case VAR_PID1_INTEGRAL_LIMIT:           PID_Tracking.setIntegralLimit(Config.PID_Tracking.IntegralLimit = _Value);                          return INTERFACE_SET_OK;
+    case VAR_PID1_INTEGRAL_RATE_LIMIT:      PID_Tracking.setIntegralRateLimit(Config.PID_Tracking.IntegralRateLimit = _Value);                  return INTERFACE_SET_OK;
+    case VAR_PID1_DERIVATIVE_TIME:          PID_Tracking.setDerivativeTime(Config.PID_Tracking.DerivativeTime = _Value);                        return INTERFACE_SET_OK;
+    case VAR_PID1_DERIVATIVE_CUTOFF:        PID_Tracking.setDerivativeCutoff(Config.PID_Tracking.DerivativeCutoff = _Value);                    return INTERFACE_SET_OK;
+    case VAR_PID1_DEADZONE:                 PID_Tracking.setDeadZone(Config.PID_Tracking.DeadZone = _Value);                                    return INTERFACE_SET_OK;
     default:                                                                                                                                return INTERFACE_SET_NOVAL;
     }
 }
@@ -897,6 +930,7 @@ void LineFollower_s::run(void)
     //sduino_adc_read();
     IMU.runAsyncProcess(TimeNow);
     LineSensor.process(TimeNow);
+    ///vlx_handle();
 
     computeControl(TimeNow);
     
@@ -904,7 +938,8 @@ void LineFollower_s::run(void)
     // {
     //     //printf("M1 %d, % .3f rpm, M2 %d, % .3f rpm, % .9f\n", Steps1, RPM1, Steps2, RPM2, PID_DriveB.getIntg());
     //     //printf("%f, %f, %f, %f, %d, %d\n", Speed0, TargetSpeed0, Speed1, TargetSpeed1, Encoder1_err, Encoder2_err);
-    //     printf("E:%f I:%f D:%f, SA:%f, G:%f, O:%f\n", PID_DriveA.getError(), PID_DriveA.getIntegral(), PID_DriveA.getDerivative(), EncoderSpeedA, PID_DriveA.getGain(), PID_DriveA.getOutput());
+    //     //printf("E:%f I:%f D:%f, SA:%f, G:%f, O:%f\n", PID_DriveA.getError(), PID_DriveA.getIntegral(), PID_DriveA.getDerivative(), EncoderSpeedA, PID_DriveA.getGain(), PID_DriveA.getOutput());
+    //     printf("VLX: %d\n", vlx_measurement);
     //     PrintTime = make_timeout_time_ms(200);
     // }
     DriveA.process(TimeNow);
@@ -922,6 +957,25 @@ float _unwrap(float previous_angle, float new_angle) {
     d = d > M_PI ? d - (float)(2 * M_PI) : (d < -M_PI ? d + (float)(2 * M_PI) : d);
     return previous_angle + d;
 }
+
+// float LineFollower_s::computePathHeading(float _FrameHeading, bool lock)
+// {
+//     float h = _unwrap(ph, _FrameHeading);
+//     ph = h;
+    
+//     if (lock)
+//     {
+//         LastFrameHeading = h;
+//         pathHeading = 0.0f;
+//     }
+//     else
+//     {
+//         pathHeading = (h - LastFrameHeading);
+//     }
+    
+
+//     return pathHeading * LINE_SENSOR_ANGLE_RAD_TO_VALUE;
+// }
 
 float constrainAngle(float x){
     x = std::fmod(x + (float)M_PI, (float)(2 * M_PI));
@@ -974,8 +1028,12 @@ void LineFollower_s::computeControl(absolute_time_t _TimeNow)
         int PulseL = ENC_Data.PulseCountB;
 
         auto [dX, dY, dYaw] = XYoffsetEncoders(PulseR - iPulseR, PulseL - iPulseL, iYaw);
+        step_counterA += PulseR - iPulseR;
+        step_counterB += PulseL - iPulseL;
         iPulseR = PulseR;
         iPulseL = PulseL;
+
+        
 
         iX_f += dX;
         iY_f += dY;
@@ -1002,38 +1060,67 @@ void LineFollower_s::computeControl(absolute_time_t _TimeNow)
         SpeedL = iSpeedL;
     }
 
+    // if (!doManuver && !manuver_done && (Start && !Stop))
+    // {
+    //     if (vlx_start)
+    //     {
+    //         if (vlx_measurement > 700)
+    //         {
+    //             vlx_start = false;
+    //             vlxTime = get_absolute_time();
+    //         }
+    //         else if (to_ms_since_boot(vlxTime) - to_ms_since_boot(get_absolute_time()) > 20)
+    //         {
+    //             vlx_start = false;
+    //             doManuver = true;
+    //             manuverStep = 0;
+    //             PathTime = get_absolute_time();
+    //         }
+    //     }
+    //     else
+    //     {
+    //         if (vlx_measurement < 700)
+    //         {
+    //             vlx_start = true;
+    //             vlxTime = get_absolute_time();
+    //         }
+    //     }
+    // }
+    
+
     auto LineHeading = LineSensor.computeLineHeading(Yaw);
+    //auto PathHeading = computePathHeading(Yaw, !doManuver);
     auto [Range, Turn] = LineSensor.getLineDesc();
     auto Detected = LineSensor.isDetected();
 
-    if (to_us_since_boot(get_absolute_time()) > to_us_since_boot(PrintTime))
-    {
-    //     //printf("LH: %f \n", LineHeading);
-    //     //printf("A: %f, B: %f\n", DriveA.getDuty(), DriveB.getDuty());
-    //     //printf("M1 %d, % .3f rpm, M2 %d, % .3f rpm, % .9f\n", Steps1, RPM1, Steps2, RPM2, PID_DriveB.getIntg());
-        // char buffer[256];
-        // //sprintf(buffer, "CMD:WS(\"R\":%.2f,\"L\":%.2f,\"Y\":%.3f,\"H\":%.3f)\n", SpeedR, SpeedL, Yaw, LineHeading);
+    // if (to_us_since_boot(get_absolute_time()) > to_us_since_boot(PrintTime))
+    // {
+    // //     //printf("LH: %f \n", LineHeading);
+    // //     //printf("A: %f, B: %f\n", DriveA.getDuty(), DriveB.getDuty());
+    // //     //printf("M1 %d, % .3f rpm, M2 %d, % .3f rpm, % .9f\n", Steps1, RPM1, Steps2, RPM2, PID_DriveB.getIntg());
+    //     // char buffer[256];
+    //     // //sprintf(buffer, "CMD:WS(\"R\":%.2f,\"L\":%.2f,\"Y\":%.3f,\"H\":%.3f)\n", SpeedR, SpeedL, Yaw, LineHeading);
 
-        // int n = sprintf(buffer, "CMD:WS(");
+    //     // int n = sprintf(buffer, "CMD:WS(");
 
-        // for (int i = 0; i < LineSensor._LineCount; i++)
-        // {
-        //     n += sprintf(buffer + n, "[%d,%d,%c]\n", LineSensor._Lines[i].Start, LineSensor._Lines[i].End, LineSensor._Lines[i].Color ? 'B' : 'W');
-        // }
-        // n += sprintf(buffer, ")\n");
-        // uart_puts(uart_internal, buffer);
-    //     // char str1[15];
-    //     // char str2[15];
-    //     char buffer[128];
-    //     //sprintf(str1, "%.9f", iX_f);
-    //     //sprintf(str2, "%.9f", iY_f);
-    //     //sprintf(buffer, "CMD:WS(\"X\":%d.%s,\"Y\":%d.%s,\"O\":%.9f,\"L\":%.9f,\"I\":%.9f)\n", iX, str1 + 2, iY, str2 + 2, iYaw, LineHeading, Yaw);
-    //     sprintf(buffer, "CMD:WS(\"X\":%.12f,\"Y\":%.12f,\"O\":%.9f,\"L\":%.9f,\"I\":%.9f)\n", iX_f, iY_f, iYaw, LineHeading, Yaw);
-    //     uart_puts(uart_internal, buffer);
-    //     //printf("R: %d, L: %d, X: %d %f Y: %d %f O: %.9f L: %.9f Yaw: %.9f\n", iPulseR, iPulseL, iX, iX_f, iY, iY_f, iYaw, LineHeading, Yaw);
-    //     //printf("sB:%f sA:%f BS:%f, SO:%f, oB:%f, oA:%f, vB:%f, vA:%f, M+:%f, M-:%f, iB:%f, iA:%f, pB:%f, pA:%f\n", SpeedA, SpeedB, BaseSpeed, SteeringOffset, OffsetB, OffsetA, OverdriveB, OverdriveA, OffsetMaxPos, OffsetMaxNeg, PID_DriveB.getIntegral(), PID_DriveA.getIntegral(), DriveB.getDuty(), DriveA.getDuty());
-         PrintTime = make_timeout_time_ms(250);
-    }
+    //     // for (int i = 0; i < LineSensor._LineCount; i++)
+    //     // {
+    //     //     n += sprintf(buffer + n, "[%d,%d,%c]\n", LineSensor._Lines[i].Start, LineSensor._Lines[i].End, LineSensor._Lines[i].Color ? 'B' : 'W');
+    //     // }
+    //     // n += sprintf(buffer, ")\n");
+    //     // uart_puts(uart_internal, buffer);
+    // //     // char str1[15];
+    // //     // char str2[15];
+    // //     char buffer[128];
+    // //     //sprintf(str1, "%.9f", iX_f);
+    // //     //sprintf(str2, "%.9f", iY_f);
+    // //     //sprintf(buffer, "CMD:WS(\"X\":%d.%s,\"Y\":%d.%s,\"O\":%.9f,\"L\":%.9f,\"I\":%.9f)\n", iX, str1 + 2, iY, str2 + 2, iYaw, LineHeading, Yaw);
+    // //     sprintf(buffer, "CMD:WS(\"X\":%.12f,\"Y\":%.12f,\"O\":%.9f,\"L\":%.9f,\"I\":%.9f)\n", iX_f, iY_f, iYaw, LineHeading, Yaw);
+    // //     uart_puts(uart_internal, buffer);
+    // //     //printf("R: %d, L: %d, X: %d %f Y: %d %f O: %.9f L: %.9f Yaw: %.9f\n", iPulseR, iPulseL, iX, iX_f, iY, iY_f, iYaw, LineHeading, Yaw);
+    // //     //printf("sB:%f sA:%f BS:%f, SO:%f, oB:%f, oA:%f, vB:%f, vA:%f, M+:%f, M-:%f, iB:%f, iA:%f, pB:%f, pA:%f\n", SpeedA, SpeedB, BaseSpeed, SteeringOffset, OffsetB, OffsetA, OverdriveB, OverdriveA, OffsetMaxPos, OffsetMaxNeg, PID_DriveB.getIntegral(), PID_DriveA.getIntegral(), DriveB.getDuty(), DriveA.getDuty());
+    //      PrintTime = make_timeout_time_ms(250);
+    // }
     
     //EncoderPulseCountA = ENC_Data.PulseCountA;
     //EncoderPulseCountB = ENC_Data.PulseCountB;
@@ -1063,50 +1150,136 @@ void LineFollower_s::computeControl(absolute_time_t _TimeNow)
     bool LineTracking = (Detected && !ReturningOnLine);// || (!Detected && Turn != LineSensor_s::LineTurn_t::LINE_NO_TURN);
     //bool LineTracking = Detected;
 
-    if (LineTracking)
-    {
-        BrakeStart = false;
-        BrakeEnd = false;
-        SteeringGain = Config.SteeringGain;
-        CruiseGain = Config.CruiseGain;
-        LineHeading = std::abs(LineHeading) < LINE_SENSOR_STEP_VALUE / 10.0f ? 0.0f : LineHeading;
-        SteeringOffset = -LineHeading * SteeringGain;
+    // if (doManuver)
+    // {
+    //     float dest = 0.0f;
+    //     float dist_mm = (step_counterA + step_counterB * ENCODER_PULSE_TO_LENGTH_MM) / 2;
+    //     switch(manuverStep)
+    //     {
+    //         case 0:
+    //         dest = LINE_SENSOR_TURN90_VALUE;
+    //         if (std::abs(PathHeading) < LINE_SENSOR_STEP_VALUE / 10.0f)
+    //         {
+    //             manuverStep++;
+    //             step_counterA = 0;
+    //             step_counterB = 0;
+    //             PathTime = get_absolute_time();
+    //             break;
+    //         }
+    //         break;
+    //         case 1:
+    //         dest = LINE_SENSOR_TURN90_VALUE;
+    //         if (dist_mm > 500)
+    //         {
+    //             manuverStep++;
+    //             PathTime = get_absolute_time();
+    //             break;
+    //         }
+    //         break;
+    //         case 2:
+    //         dest = 0.0f;
+    //         if (std::abs(PathHeading) < LINE_SENSOR_STEP_VALUE / 10.0f)
+    //         {
+    //             manuverStep++;
+    //             step_counterA = 0;
+    //             step_counterB = 0;
+    //             PathTime = get_absolute_time();
+    //             break;
+    //         }
+    //         break;
+    //         case 3:
+    //         dest = 0.0f;
+            
+    //         if (dist_mm > 500)
+    //         {
+    //             manuverStep++;
+    //             PathTime = get_absolute_time();
+    //             break;
+    //         }
+    //         break;
+    //         case 4:
+    //         dest = -LINE_SENSOR_TURN90_VALUE;
+    //         if (std::abs(PathHeading) < LINE_SENSOR_STEP_VALUE / 10.0f)
+    //         {
+    //             manuverStep++;
+    //             step_counterA = 0;
+    //             step_counterB = 0;
+    //             PathTime = get_absolute_time();
+    //             break;
+    //         }
+    //         break;
+    //         case 5:
+    //         default:
+    //         dest = -LINE_SENSOR_TURN90_VALUE;
+    //         if (Detected || to_ms_since_boot(PathTime) - to_ms_since_boot(get_absolute_time()) > 5000)
+    //         {
+    //             doManuver = false;
+    //             manuver_done = true;
+    //             manuverStep = 0;
+    //         }
+    //         break;
+    //     }
+        
+    //     SteeringGain = Config.SteeringGain4;
+    //     CruiseGain = Config.CruiseGain4;
+    //     PathHeading = dest - PathHeading;
+    //     SteeringOffset = -PathHeading * SteeringGain;
 
-        BaseSpeed = Config.ForwardSpeed - std::clamp(std::abs(LineHeading) * CruiseGain, 0.0f, Config.ForwardSpeed);
+    //     BaseSpeed = Config.ForwardSpeed - std::clamp(std::abs(PathHeading) * CruiseGain, 0.0f, Config.ForwardSpeed);
 
-        SPA = std::clamp(SteeringOffset >= 0.0f ? BaseSpeed : BaseSpeed + SteeringOffset, -10.0f, 10.0f);
-        SPB = std::clamp(SteeringOffset <= 0.0f ? BaseSpeed : BaseSpeed - SteeringOffset, -10.0f, 10.0f);
-    }
-    else
-    {
-        ReturningOnLine = true;
-        if (Config.BrakeTimeout != 0)
+    //     SPA = std::clamp(SteeringOffset >= 0.0f ? BaseSpeed : BaseSpeed + SteeringOffset, -10.0f, 10.0f);
+    //     SPB = std::clamp(SteeringOffset <= 0.0f ? BaseSpeed : BaseSpeed - SteeringOffset, -10.0f, 10.0f);
+    // }
+    // else
+    // {
+        if (LineTracking)
         {
-            if (!BrakeStart)
-            {
-                BrakeStart = true;
-                BrakeTime = make_timeout_time_us(Config.BrakeTimeout);
-            }
-        }
+            BrakeStart = false;
+            BrakeEnd = false;
+            SteeringGain = Config.SteeringGain;
+            CruiseGain = Config.CruiseGain;
+            LineHeading = std::abs(LineHeading) < LINE_SENSOR_STEP_VALUE / 10.0f ? 0.0f : LineHeading;
+            PID_Tracking.setSetPoint(0.0f);
+            SteeringOffset = PID_Tracking.compute(LineHeading, _TimeNow);
 
-        float SteeringGainF = Config.SteeringGain2;
-        float SteeringGainB = Config.SteeringGain3;
-        CruiseGain = Config.CruiseGain2;
-        BaseSpeed = Config.ForwardSpeed - std::clamp(std::abs(LineHeading) * CruiseGain, 0.0f, Config.ForwardSpeed);
-        float SteeringOffsetF = -LineHeading * SteeringGainF;
-        float SteeringOffsetB = -LineHeading * SteeringGainB;
+            BaseSpeed = Config.ForwardSpeed - std::clamp(std::abs(LineHeading) * CruiseGain, 0.0f, Config.ForwardSpeed);
 
-        if (LineHeading > 0)
-        {
-            SPA = std::clamp(BaseSpeed + SteeringOffsetB, -10.0f, 10.0f);
-            SPB = std::clamp(BaseSpeed - SteeringOffsetF, -10.0f, 10.0f);
+            SPA = std::clamp(SteeringOffset >= 0.0f ? BaseSpeed : BaseSpeed + SteeringOffset, -10.0f, 10.0f);
+            SPB = std::clamp(SteeringOffset <= 0.0f ? BaseSpeed : BaseSpeed - SteeringOffset, -10.0f, 10.0f);
         }
         else
         {
-            SPA = std::clamp(BaseSpeed + SteeringOffsetF, -10.0f, 10.0f);
-            SPB = std::clamp(BaseSpeed - SteeringOffsetB, -10.0f, 10.0f);
+            ReturningOnLine = true;
+            if (Config.BrakeTimeout != 0)
+            {
+                if (!BrakeStart)
+                {
+                    BrakeStart = true;
+                    BrakeTime = make_timeout_time_us(Config.BrakeTimeout);
+                }
+            }
+
+            float SteeringGainF = Config.SteeringGain2;
+            float SteeringGainB = Config.SteeringGain3;
+            CruiseGain = Config.CruiseGain2;
+            BaseSpeed = Config.ForwardSpeed - std::clamp(std::abs(LineHeading) * CruiseGain, 0.0f, Config.ForwardSpeed);
+            float SteeringOffsetF = -LineHeading * SteeringGainF;
+            float SteeringOffsetB = -LineHeading * SteeringGainB;
+
+            if (LineHeading > 0)
+            {
+                SPA = std::clamp(BaseSpeed + SteeringOffsetB, -10.0f, 10.0f);
+                SPB = std::clamp(BaseSpeed - SteeringOffsetF, -10.0f, 10.0f);
+            }
+            else
+            {
+                SPA = std::clamp(BaseSpeed + SteeringOffsetF, -10.0f, 10.0f);
+                SPB = std::clamp(BaseSpeed - SteeringOffsetB, -10.0f, 10.0f);
+            }
         }
-    }
+    //}
+
+    
 
     if (!Start || Stop)
     {
@@ -1118,12 +1291,12 @@ void LineFollower_s::computeControl(absolute_time_t _TimeNow)
     }
     else if (Start && !Stop)
     {
-        if (Roll > 0.6f || Roll < -0.6f || Pitch > 0.6f || Pitch < -0.6f)
-        {
-            if (!Stop)
-                stop_error();
-            return;
-        }
+        // if (Roll > 0.6f || Roll < -0.6f || Pitch > 0.6f || Pitch < -0.6f)
+        // {
+        //     if (!Stop)
+        //         stop_error();
+        //     return;
+        // }
 
         if (LineSensor.isTimedOut())
         {
