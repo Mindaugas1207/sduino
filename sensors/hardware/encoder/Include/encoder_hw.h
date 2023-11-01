@@ -10,7 +10,6 @@ extern "C" {
 #endif
 
 #include "pico/stdlib.h"
-#include "hardware/dma.h"
 #include "hardware/pio.h"
 #include "hardware/clocks.h"
 #include "hardware/gpio.h"
@@ -25,13 +24,6 @@ typedef struct {
     uint pio_sm;
     uint pinA;
     uint pinB;
-    uint pinF;
-    uint pwm;
-    uint32_t fsampling;
-
-    int32_t step_count;
-    uint32_t pwm_count;
-    absolute_time_t timestamp;
 } encoder_hw_inst_t;
 
 static int encoder_hw_init(encoder_hw_inst_t *inst)
@@ -46,21 +38,24 @@ static int encoder_hw_init(encoder_hw_inst_t *inst)
     sm_config_set_in_shift(&c, false, false, 32);
     sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_NONE);
 
-    float div = (float)clock_get_hz(clk_sys) / inst->fsampling;
-    sm_config_set_clkdiv(&c, div);
+    sm_config_set_clkdiv_int_frac(&c, 1, 0);
 
     pio_sm_init(inst->pio, inst->pio_sm, 0, &c);
 
-    if ((inst->pinB > inst->pinA ? inst->pinB - inst->pinA : inst->pinA - inst->pinB) == 1)
-    {
-        pio_sm_exec(inst->pio, inst->pio_sm, pio_encode_set(pio_x, 0));
-    }
-    else
-    {
-        pio_sm_exec(inst->pio, inst->pio_sm, pio_encode_set(pio_x, 1));
-    }
+    pio_sm_set_enabled(inst->pio, inst->pio_sm, true);
+    
+    return ENCODER_HW_OK;
+}
 
-    gpio_set_function(inst->pinF, GPIO_FUNC_PWM);
+typedef struct {
+    uint pin;
+    uint pwm;
+} freqcnt_hw_inst_t;
+
+static int freqcnt_init(freqcnt_hw_inst_t *inst)
+{
+    gpio_set_function(inst->pin, GPIO_FUNC_PWM);
+    //inst->pwm = pwm_gpio_to_slice_num(inst->pin);
     pwm_config cfg = pwm_get_default_config();
     pwm_config_set_clkdiv_mode(&cfg, PWM_DIV_B_RISING);
     pwm_config_set_clkdiv_int_frac(&cfg, 1, 0);
@@ -68,43 +63,19 @@ static int encoder_hw_init(encoder_hw_inst_t *inst)
     pwm_set_counter(inst->pwm, 0);
     pwm_init(inst->pwm, &cfg, true);
 
-    pio_sm_set_enabled(inst->pio, inst->pio_sm, true);
-    
     return ENCODER_HW_OK;
 }
 
-void encoder_read(encoder_hw_inst_t *inst)
-{
-    uint64_t deltaT = to_us_since_boot(get_absolute_time()) - to_us_since_boot(inst->timestamp);
-
-    uint32_t value = pwm_get_counter(inst->pwm);
-    pwm_set_counter(inst->pwm, 0);
-
-    inst->timestamp = get_absolute_time();
-        
-        
-        inst->pwm_count = value;
-
-
-        //new_value0 = quadrature_encoder_get_count(pio1, 0);
-        //new_value1 = quadrature_encoder_get_count(pio1, 1);metic delta will always
-    // be correct even when new_value wraps around MAXINT / MININT
-    
-    //sleep_ms(100);
-}
-
 // Get pulse count
-uint32_t encoder_get_pulse_count(encoder_hw_inst_t *inst)
+static uint32_t freqcnt_get_pulse_count(freqcnt_hw_inst_t *inst)
 {
     uint32_t value = pwm_get_counter(inst->pwm);
     pwm_set_counter(inst->pwm, 0);
-
-    inst->pwm_count = value;
 
     return value;
 }
 
-int32_t encoder_get_step_count(encoder_hw_inst_t *inst)
+static int32_t encoder_get_step_count(encoder_hw_inst_t *inst)
 {
     int32_t ret;
     int n;
@@ -116,8 +87,6 @@ int32_t encoder_get_step_count(encoder_hw_inst_t *inst)
         ret = pio_sm_get_blocking(inst->pio, inst->pio_sm);
         n--;
     }
-
-    inst->step_count = ret;
 
     return ret;
 }

@@ -14,7 +14,8 @@ PID_s PID_DriveA;
 PID_s PID_DriveB;
 PID_s PID_Tracking;
 IMU_s IMU;
-ESC_s ESC;
+static ESC_s ESC;
+static Encoder_s EncoderA, EncoderB;
 
 Blink_s LED0;
 
@@ -395,14 +396,14 @@ void LineFollower_s::ESC_Start()
     if (Start_ESC) return;
     Start_ESC = true;
     Stop_ESC = false;
-    ESC.start(0.2f, 2000);
+    ESC.Start(get_absolute_time());
 }
 
 void LineFollower_s::ESC_Stop()
 {
     Start_ESC = false;
     Stop_ESC = true;
-    ESC.stop();
+    ESC.Stop();
 }
 
 void DriversStop() {
@@ -542,7 +543,42 @@ void LineFollower_s::init(void)
 
     DriveA.init(SDUINO_INTERNAL_DRV_A_IN1_PIN, SDUINO_INTERNAL_DRV_A_IN2_PIN);
     DriveB.init(SDUINO_INTERNAL_DRV_B_IN1_PIN, SDUINO_INTERNAL_DRV_B_IN2_PIN);
-    ESC.init(29);//ESC_PWM_PIN
+
+    Encoder_s::Config_t encA_cfg = {
+        .Encoder_hw = {.pio = pio1, .pio_sm = 0, .pinA = MOTOR_A_ENCODER_A_PIN, .pinB = MOTOR_A_ENCODER_B_PIN},
+        .Freqcnt_hw = {.pin = MOTOR_A_ENCODER_A_PIN, .pwm = 4},
+        .SamplingPeriod = 1000,
+        .RPM_min = 100,
+        .RPM_max = 3000,
+        .PPR = 7,
+        .Reduction = 4,
+        .Oersampling = 4,
+        .WheelDiameter = 22.0f / 1000,
+    };
+    Encoder_s::Config_t encB_cfg = {
+        .Encoder_hw = {.pio = pio1, .pio_sm = 1, .pinA = MOTOR_B_ENCODER_A_PIN, .pinB = MOTOR_B_ENCODER_B_PIN},
+        .Freqcnt_hw = {.pin = MOTOR_B_ENCODER_A_PIN, .pwm = 5},
+        .SamplingPeriod = 1000,
+        .RPM_min = 100,
+        .RPM_max = 3000,
+        .PPR = 7,
+        .Reduction = 4,
+        .Oersampling = 4,
+        .WheelDiameter = 22.0f / 1000,
+    };
+    EncoderA.Init(encA_cfg);
+    EncoderB.Init(encB_cfg);
+
+
+    ESC_s::Config_t esc_cfg = {
+        .Esc_hw = {.pin = ESC_PWM_PIN, .frequency = 1000000, .period = 20000},
+        .RampUpPeriod = 2000,
+        .PWM_min = 1000,
+        .PWM_max = 2000,
+        .Speed = 0.0f,
+        .StartSpeed = 0.2f,
+    };
+    ESC.Init(esc_cfg);//ESC_PWM_PIN
     //sduino_adc_init();
     if (port_spi_init(&spi_port, spi_internal) == PORT_ERROR) printf("DBG:PORT_SPI_INIT->FAIL\n");
     printf("DBG:SPI INIT\n");
@@ -673,7 +709,7 @@ void LineFollower_s::load(void)
         PID_DriveA.loadConfiguration(Config.PID_Drives);
         PID_DriveB.loadConfiguration(Config.PID_Drives);
         PID_Tracking.loadConfiguration(Config.PID_Tracking);
-        ESC.setSpeed(Config.EscSpeed);
+        ESC.SetSpeed(Config.EscSpeed);
         NVM_CONFIG_OK = true;
         NVM_LOAD_OK = true;
     }
@@ -860,7 +896,7 @@ int LineFollower_s::set(int _Enum, float _Value)
     case CMD_ESC_STOP:                      ESC_Stop();                                                                                     return INTERFACE_SET_OK;
     /*Common variables                                                                                                                           */
     case VAR_SPEED:                         Config.ForwardSpeed = _Value;                                                                   return INTERFACE_SET_OK;
-    case VAR_ESC_SPEED:                     ESC.setSpeed(Config.EscSpeed = _Value);                                                         return INTERFACE_SET_OK;
+    case VAR_ESC_SPEED:                     ESC.SetSpeed(Config.EscSpeed = _Value);                                                         return INTERFACE_SET_OK;
     case VAR_STEERING_GAIN:                 Config.SteeringGain = _Value;                                                                   return INTERFACE_SET_OK;
     case VAR_STEERING_GAIN2:                Config.SteeringGain2 = _Value;                                                                  return INTERFACE_SET_OK;
     case VAR_STEERING_GAIN3:                Config.SteeringGain3 = _Value;                                                                  return INTERFACE_SET_OK;
@@ -928,6 +964,8 @@ void LineFollower_s::run(void)
 {
     absolute_time_t TimeNow = get_absolute_time();
     //sduino_adc_read();
+    EncoderA.Update(TimeNow);
+    EncoderB.Update(TimeNow);
     IMU.runAsyncProcess(TimeNow);
     LineSensor.process(TimeNow);
     ///vlx_handle();
@@ -945,7 +983,7 @@ void LineFollower_s::run(void)
     DriveA.process(TimeNow);
     DriveB.process(TimeNow);
 
-    ESC.process(TimeNow);
+    ESC.Update(TimeNow);
     
     Interface.Process();
     LineSensor.updateLeds(TimeNow);

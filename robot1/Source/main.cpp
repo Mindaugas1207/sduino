@@ -4,19 +4,19 @@
 
 #include "main.hpp"
 #include "line_follower.hpp"
-#include <stdio.h>
-#include "pico/stdlib.h"
-#include "hardware/pio.h"
+// #include <stdio.h>
+// #include "pico/stdlib.h"
+// #include "hardware/pio.h"
 LineFollower_s LineFollower;
 
-constexpr auto MOTOR_MAX_RPM = 2800; //2800, 4300
-constexpr auto ENCODER_REDUCTION = 5.4;//1:5.4, 4.4
-constexpr auto ENCODER_PPR_HAL = 11;//11, 1? 13?
-constexpr auto ENCODER_WHEEL_DIAMETER_MM = 25;
-constexpr auto ENCODER_WHEEL_DIAMETER = 0.026;
-#define TIMER_PRESCALE      250     // 8-bit value
-#define TIMER_WRAP          125000  // 17-bit value
-#define SAMPLE_FREQ         (125000000 / (TIMER_PRESCALE*TIMER_WRAP))
+// constexpr auto MOTOR_MAX_RPM = 2800; //2800, 4300
+// constexpr auto ENCODER_REDUCTION = 5.4;//1:5.4, 4.4
+// constexpr auto ENCODER_PPR_HAL = 11;//11, 1? 13?
+// constexpr auto ENCODER_WHEEL_DIAMETER_MM = 25;
+// constexpr auto ENCODER_WHEEL_DIAMETER = 0.026;
+// #define TIMER_PRESCALE      250     // 8-bit value
+// #define TIMER_WRAP          125000  // 17-bit value
+// #define SAMPLE_FREQ         (125000000 / (TIMER_PRESCALE*TIMER_WRAP))
  
 /* DRV 1
  * MOTOR     A - 15
@@ -28,13 +28,13 @@ constexpr auto ENCODER_WHEEL_DIAMETER = 0.026;
  * ENC PWM CNT - PWM3
  * ENC PWM TIM - PWM2
  */
-constexpr uint DRIVE1_MOTOR_PINA = 15;
-constexpr uint DRIVE1_MOTOR_PINB = 9;
-constexpr uint DRIVE1_MOTOR_PWMA = 7;
-constexpr uint DRIVE1_MOTOR_PWMB = 4;
-constexpr uint DRIVE1_ENCODER_PINA = 23;
-constexpr uint DRIVE1_ENCODER_PINB = 24;
-constexpr uint DRIVE1_ENCODER_PWM = 3;
+// constexpr uint DRIVE1_MOTOR_PINA = 15;
+// constexpr uint DRIVE1_MOTOR_PINB = 9;
+// constexpr uint DRIVE1_MOTOR_PWMA = 7;
+// constexpr uint DRIVE1_MOTOR_PWMB = 4;
+// constexpr uint DRIVE1_ENCODER_PINA = 23;
+// constexpr uint DRIVE1_ENCODER_PINB = 24;
+// constexpr uint DRIVE1_ENCODER_PWM = 3;
 /* DRV 2
  * MOTOR     A - 14
  * MOTOR     B -  8
@@ -45,51 +45,51 @@ constexpr uint DRIVE1_ENCODER_PWM = 3;
  * ENC PWM CNT - PWM0
  * ENC PWM TIM - PWM1
  */
-constexpr uint DRIVE2_MOTOR_PINA = 14;
-constexpr uint DRIVE2_MOTOR_PINB = 8;
-constexpr uint DRIVE2_MOTOR_PWMA = 7;
-constexpr uint DRIVE2_MOTOR_PWMB = 4;
-constexpr uint DRIVE2_ENCODER_PINA = 1;
-constexpr uint DRIVE2_ENCODER_PINB = 3;
-constexpr uint DRIVE2_ENCODER_PWM = 0;
+// constexpr uint DRIVE2_MOTOR_PINA = 14;
+// constexpr uint DRIVE2_MOTOR_PINB = 8;
+// constexpr uint DRIVE2_MOTOR_PWMA = 7;
+// constexpr uint DRIVE2_MOTOR_PWMB = 4;
+// constexpr uint DRIVE2_ENCODER_PINA = 1;
+// constexpr uint DRIVE2_ENCODER_PINB = 3;
+// constexpr uint DRIVE2_ENCODER_PWM = 0;
 
-void motor_init(uint pinA, uint pinB, uint pwmA, uint pwmB)
-{
-    gpio_set_function(pinA, GPIO_FUNC_PWM);
-    gpio_set_function(pinB, GPIO_FUNC_PWM);
-    pwm_set_wrap(pwmA, 0xFFFF);
-    pwm_set_wrap(pwmB, 0xFFFF);
-    pwm_set_clkdiv(pwmA, 1.0f);
-    pwm_set_clkdiv(pwmB, 1.0f);
-    pwm_set_enabled(pwmA, true);
-    pwm_set_enabled(pwmB, true);
-}
+// void motor_init(uint pinA, uint pinB, uint pwmA, uint pwmB)
+// {
+//     gpio_set_function(pinA, GPIO_FUNC_PWM);
+//     gpio_set_function(pinB, GPIO_FUNC_PWM);
+//     pwm_set_wrap(pwmA, 0xFFFF);
+//     pwm_set_wrap(pwmB, 0xFFFF);
+//     pwm_set_clkdiv(pwmA, 1.0f);
+//     pwm_set_clkdiv(pwmB, 1.0f);
+//     pwm_set_enabled(pwmA, true);
+//     pwm_set_enabled(pwmB, true);
+// }
 
-void setDuty(float _Duty, uint pinA, uint pinB)
-{
-    int32_t pwm = _Duty * 0xFFFF;
-    int32_t max = 0xFFFF;
+// void setDuty(float _Duty, uint pinA, uint pinB)
+// {
+//     int32_t pwm = _Duty * 0xFFFF;
+//     int32_t max = 0xFFFF;
 
-    uint val1;
-    uint val2;
+//     uint val1;
+//     uint val2;
 
-    if (pwm > 0) {
+//     if (pwm > 0) {
         
-        val1 = max;
-        val2 = pwm > max ? 0 : max - pwm;
-    }
-    else if (pwm < 0) {
-        val1 = -pwm > max ? 0 : max + pwm;
-        val2 = max;
-    }
-    else {
-        val1 = max;
-        val2 = max;
-    }
+//         val1 = max;
+//         val2 = pwm > max ? 0 : max - pwm;
+//     }
+//     else if (pwm < 0) {
+//         val1 = -pwm > max ? 0 : max + pwm;
+//         val2 = max;
+//     }
+//     else {
+//         val1 = max;
+//         val2 = max;
+//     }
 
-    pwm_set_gpio_level(pinA, val1);
-    pwm_set_gpio_level(pinB, val2);
-}
+//     pwm_set_gpio_level(pinA, val1);
+//     pwm_set_gpio_level(pinB, val2);
+// }
 
 
 

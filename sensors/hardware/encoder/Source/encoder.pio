@@ -33,20 +33,11 @@ decrement:
 update:
     MOV ISR, Y      ; read 11
     PUSH noblock
-
     OUT ISR, 2
-    JMP !X, sample_pins2
-sample_pins3:
-    IN PINS, 1
-    IN PINS, 3
-    JMP movosr
-sample_pins2:
-    IN PINS, 2
     IN PINS, 2
 movosr:
     MOV OSR, ISR
-    OUT NULL, 2
-    MOV PC, OSR
+    MOV PC, ISR
 increment:
     MOV Y, ~Y
     JMP Y--, increment_cont

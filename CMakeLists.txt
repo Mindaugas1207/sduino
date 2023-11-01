@@ -14,4 +14,3 @@ pico_sdk_init()
 set(SDUINO_PROJECT_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_subdirectory(robot1)
-add_subdirectory(robot1_m2)

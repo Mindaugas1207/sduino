@@ -16,6 +16,7 @@
 #include "pid.hpp"
 #include "sensorx.h"
 #include "esc.hpp"
+#include "encoder.hpp"
 
 #include "functional"
 #include <algorithm>
