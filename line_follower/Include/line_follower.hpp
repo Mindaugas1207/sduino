@@ -136,8 +136,6 @@ class LineFollower_s
         uint32_t StateFlags;
         IMU_s::Config_t IMU;
         LineSensor_s::Config_t LineSensor;
-        MotorDriver_s::Config_t DriveA;
-        MotorDriver_s::Config_t DriveB;
         PID_s::Config_t PID_Drives;
         PID_s::Config_t PID_Tracking;
         float ForwardSpeed;

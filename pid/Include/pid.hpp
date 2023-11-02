@@ -141,7 +141,7 @@ public:
                 // sleep_ms(200);
 
             //PID
-            Output = Error;
+            Output =  Error;
             Output += Derivative;
             Output += Integral;
             Output *= Gain;

@@ -7,8 +7,10 @@ constexpr float MAG_LSB_TO_UT(float raw) { return (raw * 1000.0f) / (float)(1 <<
 
 volatile bool data_sync_int = true;
 
-BMI08x_inst_t BMI088dev;
+struct bmi08x_dev BMI088dev;
 MMC5603_inst_t MMC5603dev;
+port_spi_dev_t gyro_spi_dev;
+port_spi_dev_t accel_spi_dev;
 port_spi_t * spi_inst;
 uint gyro_dev;
 uint accel_dev;
@@ -40,7 +42,10 @@ bool imu_hw_init(void *hw0_inst, void *hw1_inst)
     gyro_dev = port_spi_add_device(spi_inst, SDUINO_INTERNAL_IMU_GYRO_CS_PIN);
     accel_dev = port_spi_add_device(spi_inst, SDUINO_INTERNAL_IMU_ACCEL_CS_PIN);
 
-    if (BMI088_init(&BMI088dev, spi_inst, spi_inst, gyro_dev, accel_dev) != BMI08X_OK) {
+    gyro_spi_dev = {.port = spi_inst, .dev_num = gyro_dev};
+    accel_spi_dev = {.port = spi_inst, .dev_num = accel_dev};
+
+    if (BMI088_Init(&BMI088dev, &gyro_spi_dev, &accel_spi_dev) != BMI08X_OK) {
         printf("BMI INIT FAIL\n");
         return false;
     }
@@ -75,20 +80,20 @@ inline void imu_hw_stop()
 inline void imu_hw_read(float _output[IMU_NDATA])
 {
     data_sync_int = false;
-    int16_t data[6];
+    int16_t gdata[3], adata[3];
     //BMI088_ReadData(spi_inst, gyro_dev, accel_dev, data);
-    BMI088_ReadData(&BMI088dev);
+    BMI088_ReadData(&BMI088dev, gdata, adata);
 #ifdef IMU_USE_MAG
     //MMC5603_ReadDataBlocking(&MMC5603dev);;
     //if (MMC5603_NewDataReady(&MMC5603dev) == MMC5603_DATA_READY)
     MMC5603_ReadDataBlocking(&MMC5603dev);
 #endif
-    _output[0] = ACCEL_LSB_TO_MPS2((float)BMI088dev.accel.x);
-    _output[1] = ACCEL_LSB_TO_MPS2((float)BMI088dev.accel.y);
-    _output[2] = ACCEL_LSB_TO_MPS2((float)BMI088dev.accel.z);
-    _output[3] = GYRO_LSB_TO_RPS((float)BMI088dev.gyro.x);
-    _output[4] = GYRO_LSB_TO_RPS((float)BMI088dev.gyro.y);
-    _output[5] = GYRO_LSB_TO_RPS((float)BMI088dev.gyro.z);
+    _output[0] = ACCEL_LSB_TO_MPS2((float)adata[0]);
+    _output[1] = ACCEL_LSB_TO_MPS2((float)adata[1]);
+    _output[2] = ACCEL_LSB_TO_MPS2((float)adata[2]);
+    _output[3] = GYRO_LSB_TO_RPS((float)gdata[0]);
+    _output[4] = GYRO_LSB_TO_RPS((float)gdata[1]);
+    _output[5] = GYRO_LSB_TO_RPS((float)gdata[2]);
     // _output[0] = ACCEL_LSB_TO_MPS2((float)data[0]);
     // _output[1] = ACCEL_LSB_TO_MPS2((float)data[1]);
     // _output[2] = ACCEL_LSB_TO_MPS2((float)data[2]);
@@ -465,9 +470,9 @@ void IMU_s::compute(bool _NewData, absolute_time_t _TimeNow)
     Orientation = getEulerAngles(Rotation);
     // //Angular Velocity (rad/s)
     // //AngularVelocity = rotateVector(Gyroscope.Value, Rotation); //Rotate from local frame to world
-    // if (to_us_since_boot(get_absolute_time()) > to_us_since_boot(PrintTimeout))
-    // {
-    //     //printf("O> R:% .9f, P:% .9f, Y:% .9f\n", Orientation.Roll * 180.0f / M_PI, Orientation.Pitch * 180.0f / M_PI, Orientation.Yaw * 180.0f / M_PI);
+     if (to_us_since_boot(get_absolute_time()) > to_us_since_boot(PrintTimeout))
+     {
+            printf("O> R:% .9f, P:% .9f, Y:% .9f\n", Orientation.Roll * 180.0f / M_PI, Orientation.Pitch * 180.0f / M_PI, Orientation.Yaw * 180.0f / M_PI);
     //     // printf("m> % .9f, % .9f, % .9f\n"
     //     //        "   % .9f, % .9f, % .9f\n"
     //     //        "   % .9f, % .9f, % .9f\n"
@@ -488,8 +493,8 @@ void IMU_s::compute(bool _NewData, absolute_time_t _TimeNow)
     //                                              E_X(2), E_X(5), E_X(8));
     //     //printf("S> X:% .9f, Y:% .9f, Z:% .9f\n", Displacement.X, Displacement.Y, Displacement.Z);
     //     //printf("f> X:% .9f, Y:% .9f, Z:% .9f\n", AngularVelocity.X, AngularVelocity.Y, AngularVelocity.Z);
-    //     PrintTimeout = make_timeout_time_ms(50);
-    // }
+         PrintTimeout = make_timeout_time_ms(50);
+     }
 }
 
 

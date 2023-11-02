@@ -3,14 +3,6 @@
 #define INC_ESC_HPP_
 
 #include "esc_hw.h"
-#include "pico/stdlib.h"
-#include "hardware/pwm.h"
-#include <algorithm>
-
-// #define SERVO_PWM_CLKDIV 125.0f
-// #define SERVO_PWM_PERIOD 20000U
-// #define SERVO_PWM_MIN 1000
-// #define SERVO_PWM_MAX 2000
 
 #define ESC_OK PICO_OK
 #define ESC_RAMP (ESC_OK + 1)
@@ -23,19 +15,20 @@ class ESC_s {
     {
         esc_hw_inst_t Esc_hw;
         absolute_time_t RampUpPeriod;
-        uint PWM_min;
-        uint PWM_max;
-        float Speed;
-        float StartSpeed;
+        float Min;
+        float Max;
+        float Power;
+        float StartingPower;
     };
 
     esc_hw_inst_t Esc_hw;
     absolute_time_t RampUpPeriod;
-    uint PWM_min;
-    uint PWM_max;
 
-    float Speed;
-    float StartSpeed;
+    float Min;
+    float Max;
+    float Power;
+    float Setpoint;
+    float StartingPower;
 
     bool Enabled;
     bool RampUp;
@@ -43,13 +36,15 @@ class ESC_s {
 public:
     typedef Config_s Config_t;
 
-    void  SetSpeed(float _Speed) { Speed = _Speed; }
-    float GetSpeed(float _Speed) { return Speed; }
+    void  SetPower(float _Power) { Power = _Power; }
+    float GetPower(float _Power) { return Power; }
 
     int Init(void)
     {
         if (esc_hw_init(&Esc_hw) != ESC_HW_OK) return ESC_ERROR;
 
+        Stop();
+        
         return ESC_OK;
     }
     
@@ -63,9 +58,12 @@ public:
     int Start(absolute_time_t time)
     {
         if (Enabled) return ESC_OK;
-        TimeStamp = time;
-        RampUp = true;
+        
+        Setpoint = -Power; //this forces update to run even in case the power and setpoint are equal
         Enabled = true;
+        RampUp = true;
+        TimeStamp = time;
+
         return ESC_OK;
     }
 
@@ -73,7 +71,7 @@ public:
     {
         if (Enabled)
         {
-            float prop = 0.0f;
+            float _Setpoint = 0.0f;
 
             if (RampUp)
             {
@@ -81,33 +79,38 @@ public:
 
                 if (dt < RampUpPeriod)
                 {
-                    prop = (((float)dt / RampUpPeriod) * (Speed - StartSpeed)) + StartSpeed;
+                    _Setpoint = (((float)dt / RampUpPeriod) * (Power - StartingPower)) + StartingPower;
                 }
                 else
                 {
                     RampUp = false;
-                    prop = Speed;
+                    _Setpoint = Power;
                 }
             }
             else
             {
-                prop = Speed;
+                _Setpoint = Power;
             }
 
-            uint pwm = (PWM_max - PWM_min) * std::clamp(prop, StartSpeed, Speed) + PWM_min;
-            esc_hw_set_pulse(&Esc_hw, std::clamp(pwm, PWM_min, PWM_max));
+            if (Setpoint != _Setpoint)
+            {
+                Setpoint = _Setpoint;
+                int pwm = ((Max - Min) * std::clamp(Setpoint, 0.0f, 1.0f) + Min) * Esc_hw.Period;
+                esc_hw_set_pulse(&Esc_hw, std::clamp(pwm, 0, (int)Esc_hw.Period));
+            }
 
             return RampUp ? ESC_RAMP : ESC_FINAL;
         }
 
-        esc_hw_set_pulse(&Esc_hw, PWM_min);
         return ESC_OK;
     }
 
     int Stop(void)
     {
-        esc_hw_set_pulse(&Esc_hw, PWM_min);
+        esc_hw_set_pulse(&Esc_hw, Min * Esc_hw.Period);
+
         Enabled = false;
+
         return ESC_OK;
     }
 
@@ -115,10 +118,10 @@ public:
     {
         Esc_hw = _Config.Esc_hw;
         RampUpPeriod = _Config.RampUpPeriod;
-        PWM_min = _Config.PWM_min;
-        PWM_max = _Config.PWM_max;
-        Speed = _Config.Speed;
-        StartSpeed = _Config.StartSpeed;
+        Min = _Config.Min;
+        Max = _Config.Max;
+        Power = _Config.Power;
+        StartingPower = _Config.StartingPower;
     }
 
 	Config_t GetConfiguration(void)
@@ -126,10 +129,10 @@ public:
         return {
             .Esc_hw = Esc_hw,
             .RampUpPeriod = RampUpPeriod,
-            .PWM_min = PWM_min,
-            .PWM_max = PWM_max,
-            .Speed = Speed,
-            .StartSpeed = StartSpeed
+            .Min = Min,
+            .Max = Max,
+            .Power = Power,
+            .StartingPower = StartingPower
         };
     }
 };

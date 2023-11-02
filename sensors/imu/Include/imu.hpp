@@ -13,7 +13,7 @@
 #include "pico/stdlib.h"
 #include "port.h"
 #include "bmi08x.h"
-#include "bmi08_spi.h"
+#include "bmi08_hw.h"
 #include "MMC5603.h"
 #include "SensorFusion.h"
 #include "math.h"

@@ -2,10 +2,7 @@
 #ifndef INC_ENCODER_HPP_
 #define INC_ENCODER_HPP_
 
-#include "stdio.h"
-#include "pico/stdlib.h"
 #include "encoder_hw.h"
-#include "math.h"
 
 #define ENCODER_OK PICO_OK
 #define ENCODER_NEWDATA (ENCODER_OK + 1)
@@ -51,6 +48,7 @@ class Encoder_s
     uint32_t CountsLast;
     uint32_t CountsDelta;
 
+    bool Enabled;
     absolute_time_t TimeStamp;
 public:
     typedef Config_s Config_t;
@@ -62,6 +60,7 @@ public:
 
         Ratio = 1000000.0f / (PPR * Oersampling * Reduction);
         WheelLength = WheelDiameter * M_PI;
+        Enabled = false;
         
         return ENCODER_OK;
     }
@@ -73,36 +72,43 @@ public:
         return Init();
     }
 
-    int Start(void)
+    int Start(absolute_time_t time)
     {
+        if (Enabled) return ENCODER_OK;
+        TimeStamp = time;
+        Enabled = true;
+
         return ENCODER_OK;
     }
 
     int Update(absolute_time_t time)
     {
-        auto dt = absolute_time_diff_us(TimeStamp, time);
-        if (dt > SamplingPeriod)
+        if (Enabled)
         {
-            auto steps = encoder_get_step_count(&Encoder_hw);
-            auto counts = freqcnt_get_pulse_count(&Freqcnt_hw);
+            auto dt = absolute_time_diff_us(TimeStamp, time);
+            if (dt > SamplingPeriod)
+            {
+                auto steps = encoder_get_step_count(&Encoder_hw);
+                auto counts = freqcnt_get_pulse_count(&Freqcnt_hw);
 
-            StepsDelta = steps - StepsLast;
-            CountsDelta = counts - CountsLast;
-            auto tmp = Ratio / dt;
+                StepsDelta = steps - StepsLast;
+                CountsDelta = counts - CountsLast;
+                auto tmp = Ratio / dt;
 
-            RPS  = StepsDelta  * tmp;
-            RPS_ = CountsDelta * tmp;
-            RPM  = 60 * RPS;
-            RPM_ = 60 * RPS_;
+                RPS  = StepsDelta  * tmp;
+                RPS_ = CountsDelta * tmp;
+                RPM  = 60 * RPS;
+                RPM_ = 60 * RPS_;
 
-            MPS  = RPS * WheelLength;
-            MPS_ = RPS_ * WheelLength;
+                MPS  = RPS * WheelLength;
+                MPS_ = RPS_ * WheelLength;
 
-            StepsLast = steps;
-            CountsLast = counts;
-            TimeStamp = time;
+                StepsLast = steps;
+                CountsLast = counts;
+                TimeStamp = time;
 
-            return ENCODER_NEWDATA;
+                return ENCODER_NEWDATA;
+            }
         }
 
         return ENCODER_OK;
@@ -110,6 +116,8 @@ public:
 
     int Stop(void)
     {
+        Enabled = false;
+
         return ENCODER_OK;
     }
 

@@ -8,8 +8,7 @@ port_i2c_t i2c_port;
 Interface_s Interface;
 line_sesnor_hw_inst_t LineSensorHW;
 LineSensor_s LineSensor;
-MotorDriver_s DriveA;
-MotorDriver_s DriveB;
+static MotorDriver_s DriveA, DriveB;
 PID_s PID_DriveA;
 PID_s PID_DriveB;
 PID_s PID_Tracking;
@@ -407,24 +406,24 @@ void LineFollower_s::ESC_Stop()
 }
 
 void DriversStop() {
-    DriveA.stop();
-    DriveB.stop();
+    DriveA.Stop();
+    DriveB.Stop();
     PID_Tracking.reset();
     PID_DriveA.reset();
     PID_DriveB.reset();
 }
 
 void DriversBrake() {
-    DriveA.brake();
-    DriveB.brake();
+    DriveA.Brake();
+    DriveB.Brake();
     PID_Tracking.reset();
     PID_DriveA.reset();
     PID_DriveB.reset();
 }
 
 void DriversStart() {
-    DriveA.start();
-    DriveB.start();
+    DriveA.Start(0);
+    DriveB.Start(0);
 }
 
 void LineFollower_s::sleep(void)
@@ -502,7 +501,7 @@ void LineFollower_s::init(void)
     LED0.init(SDUINO_INTERNAL_LED_PIN);
     stdio_init_all();
    
-    //while (!stdio_usb_connected()) { sleep_ms(500); }
+    while (!stdio_usb_connected()) { sleep_ms(500); }
 
     printf("DBG:INIT\n");
 
@@ -541,44 +540,56 @@ void LineFollower_s::init(void)
     Interface.Init(f_getCallback, f_setCallback);
     NVM.init(FLASH_SECTOR_SIZE, &Config, sizeof(Config));
 
-    DriveA.init(SDUINO_INTERNAL_DRV_A_IN1_PIN, SDUINO_INTERNAL_DRV_A_IN2_PIN);
-    DriveB.init(SDUINO_INTERNAL_DRV_B_IN1_PIN, SDUINO_INTERNAL_DRV_B_IN2_PIN);
+    // MotorDriver_s::Config_t drvA_cfg = {
+    //     .Driver_hw = {.PinA = SDUINO_INTERNAL_DRV_A_IN1_PIN, .PinB = SDUINO_INTERNAL_DRV_A_IN2_PIN, .Frequency = 125000000, .Period = 0xFFFF },
+    //     .Min = 0.0f,
+    //     .Max = 1.0f
+    // };
 
-    Encoder_s::Config_t encA_cfg = {
-        .Encoder_hw = {.pio = pio1, .pio_sm = 0, .pinA = MOTOR_A_ENCODER_A_PIN, .pinB = MOTOR_A_ENCODER_B_PIN},
-        .Freqcnt_hw = {.pin = MOTOR_A_ENCODER_A_PIN, .pwm = 4},
-        .SamplingPeriod = 1000,
-        .RPM_min = 100,
-        .RPM_max = 3000,
-        .PPR = 7,
-        .Reduction = 4,
-        .Oersampling = 4,
-        .WheelDiameter = 22.0f / 1000,
-    };
-    Encoder_s::Config_t encB_cfg = {
-        .Encoder_hw = {.pio = pio1, .pio_sm = 1, .pinA = MOTOR_B_ENCODER_A_PIN, .pinB = MOTOR_B_ENCODER_B_PIN},
-        .Freqcnt_hw = {.pin = MOTOR_B_ENCODER_A_PIN, .pwm = 5},
-        .SamplingPeriod = 1000,
-        .RPM_min = 100,
-        .RPM_max = 3000,
-        .PPR = 7,
-        .Reduction = 4,
-        .Oersampling = 4,
-        .WheelDiameter = 22.0f / 1000,
-    };
-    EncoderA.Init(encA_cfg);
-    EncoderB.Init(encB_cfg);
+    // MotorDriver_s::Config_t drvB_cfg = {
+    //     .Driver_hw = {.PinA = SDUINO_INTERNAL_DRV_B_IN1_PIN, .PinB = SDUINO_INTERNAL_DRV_B_IN2_PIN, .Frequency = 125000000, .Period = 0xFFFF},
+    //     .Min = 0.0f,
+    //     .Max = 1.0f
+    // };
+
+    // DriveA.Init(drvA_cfg);
+    // DriveB.Init(drvB_cfg);
+
+    // Encoder_s::Config_t encA_cfg = {
+    //     .Encoder_hw = {.Pio = pio1, .Pio_sm = 0, .PinA = MOTOR_A_ENCODER_A_PIN, .PinB = MOTOR_A_ENCODER_B_PIN},
+    //     .Freqcnt_hw = {.Pin = MOTOR_A_ENCODER_A_PIN, .Pwm = 4},
+    //     .SamplingPeriod = 1000,
+    //     .RPM_min = 100,
+    //     .RPM_max = 3000,
+    //     .PPR = 7,
+    //     .Reduction = 4,
+    //     .Oersampling = 4,
+    //     .WheelDiameter = 22.0f / 1000,
+    // };
+    // Encoder_s::Config_t encB_cfg = {
+    //     .Encoder_hw = {.Pio = pio1, .Pio_sm = 1, .PinA = MOTOR_B_ENCODER_A_PIN, .PinB = MOTOR_B_ENCODER_B_PIN},
+    //     .Freqcnt_hw = {.Pin = MOTOR_B_ENCODER_A_PIN, .Pwm = 5},
+    //     .SamplingPeriod = 1000,
+    //     .RPM_min = 100,
+    //     .RPM_max = 3000,
+    //     .PPR = 7,
+    //     .Reduction = 4,
+    //     .Oersampling = 4,
+    //     .WheelDiameter = 22.0f / 1000,
+    // };
+    // EncoderA.Init(encA_cfg);
+    // EncoderB.Init(encB_cfg);
 
 
-    ESC_s::Config_t esc_cfg = {
-        .Esc_hw = {.pin = ESC_PWM_PIN, .frequency = 1000000, .period = 20000},
-        .RampUpPeriod = 2000,
-        .PWM_min = 1000,
-        .PWM_max = 2000,
-        .Speed = 0.0f,
-        .StartSpeed = 0.2f,
-    };
-    ESC.Init(esc_cfg);//ESC_PWM_PIN
+    // ESC_s::Config_t esc_cfg = {
+    //     .Esc_hw = {.Pin = ESC_PWM_PIN, .Frequency = 1000000, .Period = 20000},
+    //     .RampUpPeriod = 2000,
+    //     .Min = 0.05f,
+    //     .Max = 0.10f,
+    //     .Power = 0.5f,
+    //     .StartingPower = 0.2f,
+    // };
+    //ESC.Init(esc_cfg);//ESC_PWM_PIN
     //sduino_adc_init();
     if (port_spi_init(&spi_port, spi_internal) == PORT_ERROR) printf("DBG:PORT_SPI_INIT->FAIL\n");
     printf("DBG:SPI INIT\n");
@@ -660,14 +671,14 @@ void LineFollower_s::init(void)
     }
     IMU.startAsyncProcess();
     printf("IMU START!\n");
-    //while(1){IMU.runAsyncProcess(get_absolute_time());}
+    while(1){IMU.runAsyncProcess(get_absolute_time());}
 
     
-    if (LineSensor.init(&LineSensorHW) == LINE_SENSOR_ERROR) {
-       printf("DBG:LINE_SENSOR_INIT->FAIL\n");
-       while (true) { tight_loop_contents(); }
-    }
-    printf("LS INIT!\n");
+    // if (LineSensor.init(&LineSensorHW) == LINE_SENSOR_ERROR) {
+    //    printf("DBG:LINE_SENSOR_INIT->FAIL\n");
+    //    while (true) { tight_loop_contents(); }
+    // }
+    // printf("LS INIT!\n");
     
     load();
     printf("LOAD!\n");
@@ -681,8 +692,8 @@ void LineFollower_s::save(void)
 {
     Config.IMU = IMU.getConfiguration();
     Config.LineSensor = LineSensor.getConfiguration();
-    Config.DriveA = DriveA.getConfiguration();
-    Config.DriveB = DriveB.getConfiguration();
+    //Config.DriveA = DriveA.GetConfiguration();
+    //Config.DriveB = DriveB.GetConfiguration();
     Config.PID_Drives = PID_DriveA.getConfiguration();
     Config.PID_Tracking = PID_Tracking.getConfiguration();
 
@@ -702,14 +713,14 @@ void LineFollower_s::load(void)
         //Load Line Sensor
         LineSensor.loadConfiguration(Config.LineSensor);
         //Load Drivers
-        DriveA.loadConfiguration(Config.DriveA);
-        DriveB.loadConfiguration(Config.DriveB);
+        //DriveA.loadConfiguration(Config.DriveA);
+        //DriveB.loadConfiguration(Config.DriveB);
         
         //Load PID_DriveA
         PID_DriveA.loadConfiguration(Config.PID_Drives);
         PID_DriveB.loadConfiguration(Config.PID_Drives);
         PID_Tracking.loadConfiguration(Config.PID_Tracking);
-        ESC.SetSpeed(Config.EscSpeed);
+        ESC.SetPower(Config.EscSpeed);
         NVM_CONFIG_OK = true;
         NVM_LOAD_OK = true;
     }
@@ -737,20 +748,20 @@ void LineFollower_s::load(void)
         Config.PID_Drives = PID_DriveA.getConfiguration();
         Config.PID_Tracking = PID_Tracking.getConfiguration();
 
-        Config.DriveA = DriveA.getConfiguration();
-        Config.DriveB = DriveB.getConfiguration();
+        // Config.DriveA = DriveA.getConfiguration();
+        // Config.DriveB = DriveB.getConfiguration();
 
-        Config.DriveA.Bias = 0.1f;
-        Config.DriveA.DeadZone = 0.024f;
-        Config.DriveA.PWM_CLK_DIV = 1.0f;
-        Config.DriveB.Bias = 0.1f;
-        Config.DriveB.DeadZone = 0.024f;
-        Config.DriveB.PWM_CLK_DIV = 1.0f;
+        // Config.DriveA.Bias = 0.1f;
+        // Config.DriveA.DeadZone = 0.024f;
+        // Config.DriveA.PWM_CLK_DIV = 1.0f;
+        // Config.DriveB.Bias = 0.1f;
+        // Config.DriveB.DeadZone = 0.024f;
+        // Config.DriveB.PWM_CLK_DIV = 1.0f;
 
-        DriveA.loadConfiguration(Config.DriveA);
-        DriveB.loadConfiguration(Config.DriveB);
-        Config.DriveA = DriveA.getConfiguration();
-        Config.DriveB = DriveB.getConfiguration();
+        // DriveA.loadConfiguration(Config.DriveA);
+        // DriveB.loadConfiguration(Config.DriveB);
+        // Config.DriveA = DriveA.getConfiguration();
+        // Config.DriveB = DriveB.getConfiguration();
 
         LineSensor_s::Config_t LS_Config = {
             .EmittersPower = 1.0f,
@@ -832,14 +843,14 @@ std::tuple<int, float> LineFollower_s::get(int _Enum)
     case VAR_CRUISE_GAIN6:                  return {INTERFACE_GET_OK, Config.CruiseGain6};
     case VAR_BRAKE_TIMEOUT:                 return {INTERFACE_GET_OK, Config.BrakeTimeout};
     /*Driver variables                      */
-    case VAR_DRIVE0_PWM_WRAP_VALUE:         return {INTERFACE_GET_OK, DriveA.getPWM_WRAP_VALUE()};
-    case VAR_DRIVE0_PWM_CLK_DIV:            return {INTERFACE_GET_OK, DriveA.getPWM_CLK_DIV()};
-    case VAR_DRIVE0_BIAS:                   return {INTERFACE_GET_OK, DriveA.getBias()};
-    case VAR_DRIVE0_DEADZONE:               return {INTERFACE_GET_OK, DriveA.getDeadZone()};
-    case VAR_DRIVE1_PWM_WRAP_VALUE:         return {INTERFACE_GET_OK, DriveB.getPWM_WRAP_VALUE()};
-    case VAR_DRIVE1_PWM_CLK_DIV:            return {INTERFACE_GET_OK, DriveB.getPWM_CLK_DIV()};
-    case VAR_DRIVE1_BIAS:                   return {INTERFACE_GET_OK, DriveB.getBias()};
-    case VAR_DRIVE1_DEADZONE:               return {INTERFACE_GET_OK, DriveB.getDeadZone()};
+    // case VAR_DRIVE0_PWM_WRAP_VALUE:         return {INTERFACE_GET_OK, DriveA.getPWM_WRAP_VALUE()};
+    // case VAR_DRIVE0_PWM_CLK_DIV:            return {INTERFACE_GET_OK, DriveA.getPWM_CLK_DIV()};
+    // case VAR_DRIVE0_BIAS:                   return {INTERFACE_GET_OK, DriveA.getBias()};
+    // case VAR_DRIVE0_DEADZONE:               return {INTERFACE_GET_OK, DriveA.getDeadZone()};
+    // case VAR_DRIVE1_PWM_WRAP_VALUE:         return {INTERFACE_GET_OK, DriveB.getPWM_WRAP_VALUE()};
+    // case VAR_DRIVE1_PWM_CLK_DIV:            return {INTERFACE_GET_OK, DriveB.getPWM_CLK_DIV()};
+    // case VAR_DRIVE1_BIAS:                   return {INTERFACE_GET_OK, DriveB.getBias()};
+    // case VAR_DRIVE1_DEADZONE:               return {INTERFACE_GET_OK, DriveB.getDeadZone()};
     /*Line variables                        */
     case VAR_LINE_EMITTER_POWER:            return {INTERFACE_GET_OK, LineSensor.getEmittersPower()};
     case VAR_LINE_LED_BRIGHTNESS:           return {INTERFACE_GET_OK, LineSensor.getLedsBrightness()};
@@ -896,7 +907,7 @@ int LineFollower_s::set(int _Enum, float _Value)
     case CMD_ESC_STOP:                      ESC_Stop();                                                                                     return INTERFACE_SET_OK;
     /*Common variables                                                                                                                           */
     case VAR_SPEED:                         Config.ForwardSpeed = _Value;                                                                   return INTERFACE_SET_OK;
-    case VAR_ESC_SPEED:                     ESC.SetSpeed(Config.EscSpeed = _Value);                                                         return INTERFACE_SET_OK;
+    case VAR_ESC_SPEED:                     ESC.SetPower(Config.EscSpeed = _Value);                                                         return INTERFACE_SET_OK;
     case VAR_STEERING_GAIN:                 Config.SteeringGain = _Value;                                                                   return INTERFACE_SET_OK;
     case VAR_STEERING_GAIN2:                Config.SteeringGain2 = _Value;                                                                  return INTERFACE_SET_OK;
     case VAR_STEERING_GAIN3:                Config.SteeringGain3 = _Value;                                                                  return INTERFACE_SET_OK;
@@ -911,14 +922,14 @@ int LineFollower_s::set(int _Enum, float _Value)
     case VAR_CRUISE_GAIN6:                  Config.CruiseGain6 = _Value;                                                                    return INTERFACE_SET_OK;
     case VAR_BRAKE_TIMEOUT:                 Config.BrakeTimeout = _Value;                                                                   return INTERFACE_SET_OK;
     /*Driver variables                                                                                                                           */
-    case VAR_DRIVE0_PWM_WRAP_VALUE:         DriveA.setPWM_WRAP_VALUE(Config.DriveA.PWM_WRAP_VALUE = _Value);                                return INTERFACE_SET_OK;
-    case VAR_DRIVE0_PWM_CLK_DIV:            DriveA.setPWM_CLK_DIV(Config.DriveA.PWM_CLK_DIV = _Value);                                      return INTERFACE_SET_OK;
-    case VAR_DRIVE0_BIAS:                   DriveA.setBias(Config.DriveA.Bias = _Value);                                                    return INTERFACE_SET_OK;
-    case VAR_DRIVE0_DEADZONE:               DriveA.setDeadZone(Config.DriveA.DeadZone = _Value);                                            return INTERFACE_SET_OK;
-    case VAR_DRIVE1_PWM_WRAP_VALUE:         DriveB.setPWM_WRAP_VALUE(Config.DriveB.PWM_WRAP_VALUE = _Value);                                return INTERFACE_SET_OK;
-    case VAR_DRIVE1_PWM_CLK_DIV:            DriveB.setPWM_CLK_DIV(Config.DriveB.PWM_CLK_DIV = _Value);                                      return INTERFACE_SET_OK;
-    case VAR_DRIVE1_BIAS:                   DriveB.setBias(Config.DriveB.Bias = _Value);                                                    return INTERFACE_SET_OK;
-    case VAR_DRIVE1_DEADZONE:               DriveB.setDeadZone(Config.DriveB.DeadZone = _Value);                                            return INTERFACE_SET_OK;
+    // case VAR_DRIVE0_PWM_WRAP_VALUE:         DriveA.setPWM_WRAP_VALUE(Config.DriveA.PWM_WRAP_VALUE = _Value);                                return INTERFACE_SET_OK;
+    // case VAR_DRIVE0_PWM_CLK_DIV:            DriveA.setPWM_CLK_DIV(Config.DriveA.PWM_CLK_DIV = _Value);                                      return INTERFACE_SET_OK;
+    // case VAR_DRIVE0_BIAS:                   DriveA.setBias(Config.DriveA.Bias = _Value);                                                    return INTERFACE_SET_OK;
+    // case VAR_DRIVE0_DEADZONE:               DriveA.setDeadZone(Config.DriveA.DeadZone = _Value);                                            return INTERFACE_SET_OK;
+    // case VAR_DRIVE1_PWM_WRAP_VALUE:         DriveB.setPWM_WRAP_VALUE(Config.DriveB.PWM_WRAP_VALUE = _Value);                                return INTERFACE_SET_OK;
+    // case VAR_DRIVE1_PWM_CLK_DIV:            DriveB.setPWM_CLK_DIV(Config.DriveB.PWM_CLK_DIV = _Value);                                      return INTERFACE_SET_OK;
+    // case VAR_DRIVE1_BIAS:                   DriveB.setBias(Config.DriveB.Bias = _Value);                                                    return INTERFACE_SET_OK;
+    // case VAR_DRIVE1_DEADZONE:               DriveB.setDeadZone(Config.DriveB.DeadZone = _Value);                                            return INTERFACE_SET_OK;
     /*Line variables                                                                                                                             */
     case VAR_LINE_EMITTER_POWER:            LineSensor.setEmittersPower(Config.LineSensor.EmittersPower = _Value);                          return INTERFACE_SET_OK;
     case VAR_LINE_LED_BRIGHTNESS:           LineSensor.setLedsBrightness(Config.LineSensor.LedBrightness = _Value);                         return INTERFACE_SET_OK;
@@ -980,8 +991,8 @@ void LineFollower_s::run(void)
     //     printf("VLX: %d\n", vlx_measurement);
     //     PrintTime = make_timeout_time_ms(200);
     // }
-    DriveA.process(TimeNow);
-    DriveB.process(TimeNow);
+    DriveA.Update(TimeNow);
+    DriveB.Update(TimeNow);
 
     ESC.Update(TimeNow);
     
@@ -1361,8 +1372,8 @@ void LineFollower_s::computeControl(absolute_time_t _TimeNow)
             PID_DriveA.setSetPoint(-SPA);
             PID_DriveB.setSetPoint(SPB);
 
-            DriveA.setDuty(PID_DriveA.compute(SpeedR, _TimeNow)); //invert rigth motor feedback
-            DriveB.setDuty(PID_DriveB.compute(SpeedL, _TimeNow));
+            DriveA.SetPower(PID_DriveA.compute(SpeedR, _TimeNow)); //invert rigth motor feedback
+            DriveB.SetPower(PID_DriveB.compute(SpeedL, _TimeNow));
         }
     }
 }

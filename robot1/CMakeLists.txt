@@ -4,23 +4,23 @@ include_directories("${SDUINO_PROJECT_PATH}/eigen/Eigen")
 include_directories("${SDUINO_PROJECT_PATH}/eigen/Eigen/src")
 include_directories("${SDUINO_PROJECT_PATH}/robot1/Include")
 include_directories("${SDUINO_PROJECT_PATH}/line_follower/Include")
-include_directories("${SDUINO_PROJECT_PATH}/motors/Include")
-include_directories("${SDUINO_PROJECT_PATH}/ESC/Include")
+include_directories("${SDUINO_PROJECT_PATH}/motion")
 include_directories("${SDUINO_PROJECT_PATH}/sensors/sensorx/Include")
 include_directories("${SDUINO_PROJECT_PATH}/sensors/port/Include")
 include_directories("${SDUINO_PROJECT_PATH}/sensors/line_sensor/Include")
 include_directories("${SDUINO_PROJECT_PATH}/sensors/hardware/LED_DRIVER/Include")
 include_directories("${SDUINO_PROJECT_PATH}/sensors/hardware/padc/Include")
-include_directories("${SDUINO_PROJECT_PATH}/sensors/hardware/encoder/Include")
+include_directories("${SDUINO_PROJECT_PATH}/sensors")
 include_directories("${SDUINO_PROJECT_PATH}/sensors/hardware/I2C_MUX/Include")
 include_directories("${SDUINO_PROJECT_PATH}/sensors/hardware/VL53L0X/Include")
-include_directories("${SDUINO_PROJECT_PATH}/sensors/hardware/BMI08x/Include")
+include_directories("${SDUINO_PROJECT_PATH}/BMI08x/Include")
 include_directories("${SDUINO_PROJECT_PATH}/sensors/hardware/MMC5603/Include")
 include_directories("${SDUINO_PROJECT_PATH}/sensors/imu/SensorFusion/Include")
 include_directories("${SDUINO_PROJECT_PATH}/sensors/imu/Include")
 include_directories("${SDUINO_PROJECT_PATH}/pid/Include")
 include_directories("${SDUINO_PROJECT_PATH}/nvm/Include")
 include_directories("${SDUINO_PROJECT_PATH}/interface/Include")
+include_directories("${SDUINO_PROJECT_PATH}/hardware")
 
 target_compile_definitions(line_follower PUBLIC -DMOTORDEF0)
 target_compile_definitions(line_follower PUBLIC -DPORT_PI4MSD5V9540B)  # -D removed
@@ -28,22 +28,20 @@ target_compile_definitions(line_follower PUBLIC -DPORT_PI4MSD5V9540B)  # -D remo
 target_compile_definitions(line_follower PUBLIC -DINTERFACE_DEBUG)
 
 pico_generate_pio_header(line_follower ${SDUINO_PROJECT_PATH}/sensors/hardware/padc/Source/padc.pio)
-pico_generate_pio_header(line_follower ${SDUINO_PROJECT_PATH}/sensors/hardware/encoder/Source/encoder.pio)
+pico_generate_pio_header(line_follower ${SDUINO_PROJECT_PATH}/hardware/pio/encoder.pio)
 
 target_sources(line_follower PRIVATE
     Source/main.cpp
     ../nvm/Source/nvm.cpp
     ../interface/Source/interface.cpp
     ../line_follower/Source/line_follower.cpp
-    ../motors/Source/motor_driver.cpp
     ../sensors/line_sensor/Source/line_sensor.cpp
     ../sensors/hardware/padc/Source/padc.c
     ../sensors/hardware/LED_DRIVER/Source/IS31FL3218.c
     ../sensors/hardware/I2C_MUX/Source/PI4MSD5V9540B.c
     ../sensors/port/Source/port.c
-    ../sensors/hardware/BMI08x/Source/bmi08_spi.c
-    ../sensors/hardware/BMI08x/Source/bmi08a.c
-    ../sensors/hardware/BMI08x/Source/bmi08g.c
+    ../BMI08x/Source/bmi08a.c
+    ../BMI08x/Source/bmi08g.c
     ../sensors/hardware/MMC5603/Source/MMC5603.c
     ../sensors/hardware/VL53L0X/Source/vl53l0x_platform.c
     ../sensors/hardware/VL53L0X/Source/vl53l0x_platform_log.c
