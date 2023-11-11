@@ -61,10 +61,8 @@ typedef struct {
     VL53L0X_DevData_t Data;               /*!< embed ST Ewok Dev  data as "Data"*/
 
     /*!< user specific field */
-	port_i2c_t *port_inst;
-	int8_t port_channel;
+	port_device_t *port_device;
     uint8_t device_enum;					//device id, number,
-    uint8_t device_address;					//device i2c address.
 } VL53L0X_Dev_t;
 
 /**

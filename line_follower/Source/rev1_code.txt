@@ -1,0 +1,346 @@
+#define DRV_R 473.5f
+constexpr auto ESC_PWM_PIN = 29U; //pwm5 A
+constexpr auto MOTOR_B_ENCODER_A_PIN = 23U; //pwm0 b
+constexpr auto MOTOR_B_ENCODER_B_PIN = 24U; //pwm1 b
+constexpr auto MOTOR_A_ENCODER_A_PIN = 1U; // reik pakeist i 23 pwm3 b
+constexpr auto MOTOR_A_ENCODER_B_PIN = 2U; //pwm4 b reik pakeist i 24 pwm4 a
+constexpr auto MOTOR_B_ENCODER_PINS_MASK = 1U << MOTOR_B_ENCODER_A_PIN | 1U << MOTOR_B_ENCODER_B_PIN;
+constexpr auto MOTOR_A_ENCODER_PINS_MASK = 1U << MOTOR_A_ENCODER_A_PIN | 1U << MOTOR_A_ENCODER_B_PIN;
+constexpr auto MOTOR_MIN_RPM = 260;
+//constexpr auto MOTOR_NOMINAL_RPM = 2800;
+//constexpr auto MOTOR_MAX_RPM = 2800;
+#ifdef MOTORDEF0
+// constexpr auto MOTOR_MAX_RPM = 2800; //2800, 4300
+// constexpr auto ENCODER_REDUCTION = 5.4;//1:5.4, 4.4
+// constexpr auto ENCODER_PPR_HAL = 11;//11, 1? 13?
+// constexpr auto ENCODER_WHEEL_DIAMETER_MM = 25;
+// constexpr auto ENCODER_WHEEL_DIAMETER = 0.025;
+constexpr auto MOTOR_MAX_RPM = 3850; //2800, 4300
+constexpr auto ENCODER_REDUCTION = 4;//1:5.4, 4.4
+constexpr auto ENCODER_PPR_HAL = 7;//11, 1? 13?
+constexpr auto ENCODER_WHEEL_DIAMETER_MM = 22;
+constexpr auto ENCODER_WHEEL_DIAMETER = 0.022;
+#endif
+#ifdef MOTORDEF1
+constexpr auto MOTOR_MAX_RPM = 4300; //2800, 4300
+constexpr auto ENCODER_REDUCTION = 4.4;//1:5.4, 4.4
+constexpr auto ENCODER_PPR_HAL = 11;//11, 1? 13?
+constexpr auto ENCODER_WHEEL_DIAMETER_MM = 32;
+#endif
+constexpr auto ENCODER_EPP_HAL = 4;
+constexpr auto ENCODER_PPR = ENCODER_PPR_HAL * ENCODER_EPP_HAL * ENCODER_REDUCTION;
+constexpr auto ENCODER_MAX_PULSE_PERIOD_US = (float)(60 * 1000000 / MOTOR_MIN_RPM / ENCODER_PPR);
+constexpr auto ENCODER_MIN_PULSE_PERIOD_US = (float)(60 * 1000000 / MOTOR_MAX_RPM / ENCODER_PPR);
+constexpr auto ENCODER_UPDATE_PERIOD_US = 1000;
+constexpr auto ENCODER_UPDATE_RETRY_PERIOD_US = 30;
+constexpr auto ENCODER_SAMPLE_BUFFER_SIZE = 32;
+constexpr auto ENCODER_CONVERSION_BOT = (float)(1.0 / (int)ENCODER_MAX_PULSE_PERIOD_US);
+constexpr auto ENCODER_CONVERSION_TOP = (float)(1.0 / (int)ENCODER_MIN_PULSE_PERIOD_US);
+constexpr auto ENCODER_CONVERSION_SPAN = ENCODER_CONVERSION_TOP - ENCODER_CONVERSION_BOT;
+constexpr auto ENCODER_WHEEL_LENGTH_MM = ENCODER_WHEEL_DIAMETER_MM * M_PI;
+constexpr auto ENCODER_WHEEL_LENGTH = ENCODER_WHEEL_DIAMETER * M_PI;
+constexpr auto ENCODER_PULSE_TO_MM = (float)(ENCODER_WHEEL_LENGTH_MM / ENCODER_PPR);
+constexpr auto ENCODER_BASE_LENGTH_MM = 184;
+
+constexpr auto ENCODER_PULSE_TO_LENGTH = ENCODER_WHEEL_LENGTH / ENCODER_PPR;
+constexpr auto ENCODER_PULSE_TO_LENGTH_MM = ENCODER_WHEEL_LENGTH_MM / ENCODER_PPR;
+constexpr auto ENCODER_BASE_LENGTH = 0.184;
+
+struct EncoderData_s {
+    int PulseCountA, PulseCountB, PulsePeriodSumA, PulsePeriodSumB, PulseDirectionA, PulseDirectionB;
+};
+
+float BatteryVoltage = 0.0f;
+
+constexpr auto ENCODER_QUEUE_SIZE = 10U;
+constexpr auto ENCODER_QUEUE_DATA_SIZE = sizeof(EncoderData_s);
+
+queue_t gEncoderQueue;
+
+std::tuple<EncoderData_s, bool> getEncoderData()
+{
+    EncoderData_s NewData;
+
+    bool Ok = queue_try_remove(&gEncoderQueue, &NewData);
+
+    return {NewData, Ok};
+}
+
+void __not_in_flash_func(encoderProcess)()
+{
+    multicore_lockout_victim_init();
+
+    auto getStateAB = [](){
+        auto gpio_state = gpio_get_all();
+        auto PulseStateA = (gpio_state & MOTOR_A_ENCODER_PINS_MASK) >> MOTOR_A_ENCODER_A_PIN;
+        auto PulseStateB = (gpio_state & MOTOR_B_ENCODER_PINS_MASK) >> MOTOR_B_ENCODER_A_PIN;
+        PulseStateB = (PulseStateB >> 1 | PulseStateB) & 3;
+        return std::tuple<uint, uint>{PulseStateA, PulseStateB};
+    };
+
+    auto getPulseDirection = [](uint LastPulseState, uint NewPulseState){
+        switch (LastPulseState << 2 | NewPulseState)
+        {
+            case 0b0010: case 0b0100: case 0b1011: case 0b1101: return +1;
+            case 0b0001: case 0b0111: case 0b1000: case 0b1110: return -1;
+            default: return 0;
+        }
+    };
+
+    auto getTimeStamp = [](){
+        auto hi = timer_hw->timerawh;
+        auto lo = timer_hw->timerawl;
+        auto next_hi = timer_hw->timerawh;
+        if (hi != next_hi) hi = next_hi;
+        return (uint64_t)hi << 32u | lo;
+    };
+
+    std::size_t SampleIndexA = 0, SampleIndexB = 0;
+    std::array<int, ENCODER_SAMPLE_BUFFER_SIZE> PulsePeriodSamplesA, PulsePeriodSamplesB;
+    PulsePeriodSamplesA.fill(ENCODER_MAX_PULSE_PERIOD_US); PulsePeriodSamplesB.fill(ENCODER_MAX_PULSE_PERIOD_US);
+
+    uint64_t LastTimeStampA, LastTimeStampB, TimeOutTimeStampA, TimeOutTimeStampB, UpdateTimeStamp;
+    LastTimeStampA = LastTimeStampB = TimeOutTimeStampA = TimeOutTimeStampB = UpdateTimeStamp = getTimeStamp();
+
+    auto [LastPulseStateA, LastPulseStateB] = getStateAB();
+
+    int PulseCountA = 0, PulseCountB = 0, PulseDirectionA = 0, PulseDirectionB = 0, PulsePeriodSumA, PulsePeriodSumB;
+    PulsePeriodSumA = PulsePeriodSumB = ENCODER_MAX_PULSE_PERIOD_US * ENCODER_SAMPLE_BUFFER_SIZE;
+
+    for (;;)
+    {
+        auto NewTimeStamp = getTimeStamp();
+        auto [NewPulseStateA, NewPulseStateB] = getStateAB();
+        
+        if (NewPulseStateA != LastPulseStateA)
+        {
+            PulseDirectionA = getPulseDirection(LastPulseStateA, NewPulseStateA);
+            PulseCountA += PulseDirectionA;
+            
+            PulsePeriodSumA -= PulsePeriodSamplesA[SampleIndexA];
+            PulsePeriodSumA += PulsePeriodSamplesA[SampleIndexA ++] = NewTimeStamp - LastTimeStampA;
+            if (SampleIndexA >= ENCODER_SAMPLE_BUFFER_SIZE) SampleIndexA = 0;
+
+            LastPulseStateA = NewPulseStateA;
+            LastTimeStampA = NewTimeStamp;
+            TimeOutTimeStampA = NewTimeStamp + ENCODER_MAX_PULSE_PERIOD_US;
+        }
+        else if (NewTimeStamp > TimeOutTimeStampA)
+        {
+            PulsePeriodSumA -= PulsePeriodSamplesA[SampleIndexA];
+            PulsePeriodSumA += PulsePeriodSamplesA[SampleIndexA ++] = ENCODER_MAX_PULSE_PERIOD_US;
+            if (SampleIndexA >= ENCODER_SAMPLE_BUFFER_SIZE) SampleIndexA = 0;
+
+            LastTimeStampA = NewTimeStamp;
+            TimeOutTimeStampA = NewTimeStamp + ENCODER_MAX_PULSE_PERIOD_US;
+        }
+
+        if (NewPulseStateB != LastPulseStateB)
+        {
+            PulseDirectionB = getPulseDirection(LastPulseStateB, NewPulseStateB);
+            PulseCountB += PulseDirectionB;
+
+            PulsePeriodSumB -= PulsePeriodSamplesB[SampleIndexB];
+            PulsePeriodSumB += PulsePeriodSamplesB[SampleIndexB ++] = NewTimeStamp - LastTimeStampB;
+            if (SampleIndexB >= ENCODER_SAMPLE_BUFFER_SIZE) SampleIndexB = 0;
+
+            LastPulseStateB = NewPulseStateB;
+            LastTimeStampB = NewTimeStamp;
+            TimeOutTimeStampB = NewTimeStamp + ENCODER_MAX_PULSE_PERIOD_US;
+        }
+        else if (NewTimeStamp > TimeOutTimeStampB)
+        {
+            PulsePeriodSumB -= PulsePeriodSamplesB[SampleIndexB];
+            PulsePeriodSumB += PulsePeriodSamplesB[SampleIndexB ++] = ENCODER_MAX_PULSE_PERIOD_US;
+            if (SampleIndexB >= ENCODER_SAMPLE_BUFFER_SIZE) SampleIndexB = 0;
+
+            LastTimeStampB = NewTimeStamp;
+            TimeOutTimeStampB = NewTimeStamp + ENCODER_MAX_PULSE_PERIOD_US;
+        }
+
+        if (NewTimeStamp > UpdateTimeStamp)
+        {
+            EncoderData_s NewData = {
+                .PulseCountA = PulseCountA,
+                .PulseCountB = PulseCountB,
+                .PulsePeriodSumA = PulsePeriodSumA,
+                .PulsePeriodSumB = PulsePeriodSumB,
+                .PulseDirectionA = PulseDirectionA,
+                .PulseDirectionB = PulseDirectionB,
+            };
+
+            if (queue_try_add(&gEncoderQueue, &NewData))
+                UpdateTimeStamp = NewTimeStamp + ENCODER_UPDATE_PERIOD_US;
+            else
+                UpdateTimeStamp = NewTimeStamp + ENCODER_UPDATE_RETRY_PERIOD_US;
+        }
+    }
+}
+
+void encodersInit()
+{
+    gpio_init(MOTOR_A_ENCODER_A_PIN);
+    gpio_set_dir(MOTOR_A_ENCODER_A_PIN, GPIO_IN);
+    gpio_init(MOTOR_A_ENCODER_B_PIN);
+    gpio_set_dir(MOTOR_A_ENCODER_B_PIN, GPIO_IN);
+
+    gpio_init(MOTOR_B_ENCODER_A_PIN);
+    gpio_set_dir(MOTOR_B_ENCODER_A_PIN, GPIO_IN);
+    gpio_init(MOTOR_B_ENCODER_B_PIN);
+    gpio_set_dir(MOTOR_B_ENCODER_B_PIN, GPIO_IN);
+
+    queue_init(&gEncoderQueue, ENCODER_QUEUE_DATA_SIZE, ENCODER_QUEUE_SIZE);
+
+    multicore_launch_core1(encoderProcess);
+}
+
+void ButterworthLowpassFilter0050SixthOrder(const float src[], float dest[], int size)
+{ 	
+	const int NZEROS = 6;
+	const int NPOLES = 6;
+	const float GAIN = 1.165969038e+05;
+
+	float xv[NZEROS+1] = {0.0}, yv[NPOLES+1] = {0.0};
+
+    for (int i = 0; i < size; i++)
+  	{ 
+		xv[0] = xv[1]; xv[1] = xv[2]; xv[2] = xv[3]; xv[3] = xv[4]; xv[4] = xv[5]; xv[5] = xv[6]; 
+        xv[6] = src[i] / GAIN;
+        yv[0] = yv[1]; yv[1] = yv[2]; yv[2] = yv[3]; yv[3] = yv[4]; yv[4] = yv[5]; yv[5] = yv[6]; 
+        yv[6] =   (xv[0] + xv[6]) + 6.0 * (xv[1] + xv[5]) + 15.0 * (xv[2] + xv[4])
+                     + 20.0 * xv[3]
+                     + ( -0.2951724313 * yv[0]) + (  2.1290387500 * yv[1])
+                     + ( -6.4411118810 * yv[2]) + ( 10.4690788930 * yv[3])
+                     + ( -9.6495177287 * yv[4]) + (  4.7871354989 * yv[5]);
+        dest[i] = yv[6];
+    }
+}
+
+
+
+
+
+SENSORX_VL53L0X_t dev_vlx;
+uint16_t vlx_measurement = 0;
+bool vlx_ongoing = false;
+// volatile bool vlx_sync_int = true;
+// #define VLX_INT_PIN 25
+// static void vlx_hw_callback(uint gpio, uint32_t events)
+// {
+//     vlx_sync_int = true;
+// }
+// inline bool vlx_hw_new_data_available()
+// {
+//     return vlx_sync_int || gpio_get(VLX_INT_PIN);
+// }
+// inline void vlx_hw_start()
+// {
+//     gpio_set_irq_enabled(VLX_INT_PIN, GPIO_IRQ_EDGE_RISE, true);
+//     vlx_sync_int = true;
+// }
+// inline void vlx_hw_stop()
+// {
+//     gpio_set_irq_enabled(VLX_INT_PIN, GPIO_IRQ_EDGE_RISE, false);
+// }
+void vlx_handle();
+void vlx_getMeasurement();
+void vlx_handle()
+{
+    if (!vlx_ongoing)
+    {
+        SENSORX_VL53L0X_StartMeasurement(&dev_vlx);
+        vlx_ongoing = true;
+    }
+    else
+    {
+        if (SENSORX_VL53L0X_PollMeasurementDataReady(&dev_vlx) == 1)
+        {
+            vlx_ongoing = false;
+            vlx_getMeasurement();
+        }
+    }
+
+
+}
+
+void vlx_getMeasurement()
+{
+    int error = SENSORX_OK;
+    VL53L0X_RangingMeasurementData_t data;
+    error = SENSORX_VL53L0X_GetMeasurementData(&dev_vlx, &data);
+    error = SENSORX_VL53L0X_ClearInterrupt(&dev_vlx);
+    if(error == SENSORX_OK)
+    {
+        //SENSORX_VL53L0X_PrintMeasurementData(&dev_vlx, data);
+        if(data.RangeStatus == VL53L0X_RANGESTATUS_RANGEVALID)
+        {
+            vlx_measurement = data.RangeMilliMeter;
+        }
+        else
+        {
+            vlx_measurement = 10000;
+        }
+    }
+    else
+    {
+        vlx_measurement = 12000;
+    }
+}
+
+port_device_t pdev_vlx;
+
+bool vlx_init()
+{
+    pdev_vlx = {
+        .hw_intf = &I2C_Mux,
+        .hw_intf_index = I2C_MUX_CHANNEL_0,
+        .hw_address = VL53L0X_DEFAULT_ADDRESS,
+        .hw_type = PORT_I2C_MUX
+    };
+
+    vlx_measurement = 20000;
+    if (SENSORX_VL53L0X_Init(&dev_vlx, &pdev_vlx, 0) != SENSORX_OK) return false;
+    if (SENSORX_VL53L0X_GetConfig(&dev_vlx) != SENSORX_OK) return false;
+    if (SENSORX_VL53L0X_RunCalibrations(&dev_vlx, VL53L0X_CALIBRATE_SPADS) != SENSORX_OK) return false;
+    if (SENSORX_VL53L0X_RunCalibrations(&dev_vlx, VL53L0X_CALIBRATE_REF) != SENSORX_OK) return false;
+    dev_vlx.config.RANGING_MODE = VL53L0X_DEVICEMODE_CONTINUOUS_RANGING;
+
+    //dev_vlx.config.RANGING_MODE = VL53L0X_DEVICEMODE_SINGLE_RANGING;
+    //inst->config.RANGING_MODE = VL53L0X_DEVICEMODE_CONTINUOUS_RANGING;
+    if (SENSORX_VL53L0X_SetConfig(&dev_vlx) != SENSORX_OK) return false;
+    if (SENSORX_VL53L0X_PrintAll(&dev_vlx) != SENSORX_OK) return false;
+
+    // gpio_init(VLX_INT_PIN);
+    // gpio_set_dir(VLX_INT_PIN, GPIO_IN);
+    // gpio_set_irq_enabled_with_callback(VLX_INT_PIN, GPIO_IRQ_EDGE_RISE, true, &vlx_hw_callback);
+    // vlx_hw_start();
+    if (SENSORX_VL53L0X_StartMeasurement(&dev_vlx) != SENSORX_OK) return false;
+    vlx_ongoing = true;
+    
+    return true;
+}
+
+
+
+std::tuple<float, float, float> XYoffsetEncoders(auto dR, auto dL, float A0)
+{
+    auto A = dR - dL;
+    auto E = (float)(ENCODER_BASE_LENGTH / 2.0) * (dR + dL);
+    auto B = E / A;
+    float AX, AY, C;
+    if (std::isinf(B) || std::isnan(B))
+    {
+        B = (float)(ENCODER_PULSE_TO_LENGTH / 2.0) * (dR + dL);
+        C = 0.0f;
+        AX = std::cos(A0);
+        AY = std::sin(A0);
+    }
+    else
+    {
+        C = (float)(ENCODER_PULSE_TO_LENGTH / ENCODER_BASE_LENGTH) * A;
+        AX =   std::sin(C + A0) - std::sin(A0);
+        AY = -(std::cos(C + A0) - std::cos(A0));
+    }
+    
+    return {B * AX, B * AY, C};
+}

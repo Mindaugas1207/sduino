@@ -908,12 +908,12 @@ int8_t bmi08a_set_regs(uint8_t reg_addr, const uint8_t *reg_data, uint32_t len, 
             /* Delay for suspended mode of the sensor is 450 us */
             if (dev->accel_cfg.power == BMI08X_ACCEL_PM_SUSPEND)
             {
-                dev->delay_us(450, dev->intf_ptr_accel);
+                port_delay_us(450);
             }
             /* Delay for Normal mode of the sensor is 2 us */
             else if (dev->accel_cfg.power == BMI08X_ACCEL_PM_ACTIVE)
             {
-                dev->delay_us(2, dev->intf_ptr_accel);
+                port_delay_us(2);
             }
             else
             {
@@ -1024,7 +1024,7 @@ int8_t bmi08a_soft_reset(struct bmi08x_dev *dev)
         if (rslt == BMI08X_OK)
         {
             /* Delay 1 ms after reset value is written to its register */
-            dev->delay_us(BMI08X_MS_TO_US(BMI08X_ACCEL_SOFTRESET_DELAY_MS), dev->intf_ptr_accel);
+            port_delay_us(BMI08X_MS_TO_US(BMI08X_ACCEL_SOFTRESET_DELAY_MS));
 
             /* After soft reset SPI mode in the initialization phase, need to  perform a dummy SPI read
              * operation, The soft-reset performs a fundamental reset to the device,
@@ -1221,7 +1221,7 @@ int8_t bmi08a_set_power_mode(struct bmi08x_dev *dev)
             if (rslt == BMI08X_OK)
             {
                 /*delay between power ctrl and power config*/
-                dev->delay_us(BMI08X_MS_TO_US(BMI08X_POWER_CONFIG_DELAY), dev->intf_ptr_accel);
+                port_delay_us(BMI08X_MS_TO_US(BMI08X_POWER_CONFIG_DELAY));
 
                 /* write to accel power configuration register */
                 rslt = set_regs(BMI08X_REG_ACCEL_PWR_CTRL, &data[1], 1, dev);
@@ -1229,7 +1229,7 @@ int8_t bmi08a_set_power_mode(struct bmi08x_dev *dev)
                 if (rslt == BMI08X_OK)
                 {
                     /*delay required to switch power modes*/
-                    dev->delay_us(BMI08X_MS_TO_US(BMI08X_POWER_CONFIG_DELAY), dev->intf_ptr_accel);
+                    port_delay_us(BMI08X_MS_TO_US(BMI08X_POWER_CONFIG_DELAY));
                 }
             }
         }
@@ -1600,7 +1600,7 @@ int8_t bmi08a_read_fifo_data(struct bmi08x_fifo_frame *fifo, struct bmi08x_dev *
             fifo->length = fifo_length + dev->dummy_byte;
 
             /* Read FIFO data */
-            dev->intf_rslt = dev->read(addr, fifo->data, (uint32_t)fifo->length, dev->intf_ptr_accel);
+            dev->intf_rslt = port_read_mem(&dev->intf_accel, addr, fifo->data, (uint32_t)fifo->length);
 
             /* If interface read fails, update rslt variable with communication failure */
             if (dev->intf_rslt != BMI08X_INTF_RET_SUCCESS)
@@ -1826,7 +1826,7 @@ int8_t bmi08a_set_fifo_down_sample(uint8_t fifo_downs, struct bmi08x_dev *dev)
  *  @brief This API is used to enable/disable and configure the data synchronization
  *  feature.
  */
-int8_t bmi08a_configure_data_synchronization(struct bmi08x_data_sync_cfg sync_cfg, struct bmi08x_dev *dev)
+int8_t bmi08a_configure_data_synchronization(struct bmi08x_dev *dev)
 {
     int8_t rslt;
     uint16_t data[BMI08X_ACCEL_DATA_SYNC_LEN];
@@ -1838,7 +1838,7 @@ int8_t bmi08a_configure_data_synchronization(struct bmi08x_data_sync_cfg sync_cf
     if (rslt == BMI08X_OK)
     {
         /* Change sensor meas config */
-        switch (sync_cfg.mode)
+        switch (dev->sync_mode)
         {
             case BMI08X_ACCEL_DATA_SYNC_MODE_2000HZ:
                 dev->accel_cfg.odr = BMI08X_ACCEL_ODR_1600_HZ;
@@ -1870,14 +1870,14 @@ int8_t bmi08a_configure_data_synchronization(struct bmi08x_data_sync_cfg sync_cf
             if (rslt == BMI08X_OK)
             {
                 /* Enable data synchronization */
-                data[0] = (sync_cfg.mode & BMI08X_ACCEL_DATA_SYNC_MODE_MASK);
+                data[0] = (dev->sync_mode & BMI08X_ACCEL_DATA_SYNC_MODE_MASK);
                 rslt =
                     bmi08a_write_feature_config(BMI08X_ACCEL_DATA_SYNC_ADR, &data[0], BMI08X_ACCEL_DATA_SYNC_LEN, dev);
             }
         }
 
         /* Delay of 100ms for data sync configurations to take effect */
-        dev->delay_us(100000, dev->intf_ptr_accel);
+        port_delay_us(100000);
     }
 
     return rslt;
@@ -1945,31 +1945,24 @@ int8_t bmi08a_get_synchronized_data(struct bmi08x_sensor_data *accel,
  *  based on the user settings in the bmi08x_int_cfg
  *  structure instance.
  */
-int8_t bmi08a_set_data_sync_int_config(const struct bmi08x_int_cfg *int_config, struct bmi08x_dev *dev)
+int8_t bmi08a_set_data_sync_int_config(struct bmi08x_dev *dev)
 {
     int8_t rslt;
 
-    if (int_config != NULL)
+    /* Configure accel sync data ready interrupt configuration */
+    rslt = bmi08a_set_int_config(&dev->accel_int_config_1, dev);
+    if (rslt == BMI08X_OK)
     {
-        /* Configure accel sync data ready interrupt configuration */
-        rslt = bmi08a_set_int_config(&int_config->accel_int_config_1, dev);
+        rslt = bmi08a_set_int_config(&dev->accel_int_config_2, dev);
         if (rslt == BMI08X_OK)
         {
-            rslt = bmi08a_set_int_config(&int_config->accel_int_config_2, dev);
+            /* Configure gyro data ready interrupt configuration */
+            rslt = bmi08g_set_int_config(&dev->gyro_int_config_1, dev);
             if (rslt == BMI08X_OK)
             {
-                /* Configure gyro data ready interrupt configuration */
-                rslt = bmi08g_set_int_config(&int_config->gyro_int_config_1, dev);
-                if (rslt == BMI08X_OK)
-                {
-                    rslt = bmi08g_set_int_config(&int_config->gyro_int_config_2, dev);
-                }
+                rslt = bmi08g_set_int_config(&dev->gyro_int_config_2, dev);
             }
         }
-    }
-    else
-    {
-        rslt = BMI08X_E_NULL_PTR;
     }
 
     return rslt;
@@ -2015,8 +2008,7 @@ static int8_t null_ptr_check(const struct bmi08x_dev *dev)
 {
     int8_t rslt;
 
-    if ((dev == NULL) || (dev->read == NULL) || (dev->write == NULL) || (dev->delay_us == NULL) ||
-        (dev->intf_ptr_accel == NULL))
+    if (dev == NULL)
     {
         /* Device structure pointer is not valid */
         rslt = BMI08X_E_NULL_PTR;
@@ -2046,7 +2038,7 @@ static int8_t get_regs(uint8_t reg_addr, uint8_t *reg_data, uint32_t len, struct
     }
 
     /* Read the data from the register */
-    dev->intf_rslt = dev->read(reg_addr, temp_buff, (len + dev->dummy_byte), dev->intf_ptr_accel);
+    dev->intf_rslt = port_read_mem(&dev->intf_accel, reg_addr, temp_buff, (len + dev->dummy_byte));
 
     if (dev->intf_rslt == BMI08X_INTF_RET_SUCCESS)
     {
@@ -2079,7 +2071,7 @@ static int8_t set_regs(uint8_t reg_addr, const uint8_t *reg_data, uint32_t len, 
     }
 
     /* write to an accel register */
-    dev->intf_rslt = dev->write(reg_addr, reg_data, len, dev->intf_ptr_accel);
+    dev->intf_rslt = port_write_mem(&dev->intf_accel, reg_addr, reg_data, len);
 
     if (dev->intf_rslt != BMI08X_INTF_RET_SUCCESS)
     {
@@ -2333,7 +2325,7 @@ static int8_t enable_self_test(struct bmi08x_dev *dev)
         if (rslt == BMI08X_OK)
         {
             /* Self test delay */
-            dev->delay_us(BMI08X_MS_TO_US(BMI08X_SELF_TEST_DELAY_MS), dev->intf_ptr_accel);
+            port_delay_us(BMI08X_MS_TO_US(BMI08X_SELF_TEST_DELAY_MS));
         }
     }
 
@@ -2353,7 +2345,7 @@ static int8_t positive_excited_accel(struct bmi08x_sensor_data *accel_pos, struc
     if (rslt == BMI08X_OK)
     {
         /* Read accel data after 50ms delay */
-        dev->delay_us(BMI08X_MS_TO_US(BMI08X_SELF_TEST_DATA_READ_MS), dev->intf_ptr_accel);
+        port_delay_us(BMI08X_MS_TO_US(BMI08X_SELF_TEST_DATA_READ_MS));
         rslt = bmi08a_get_data(accel_pos, dev);
     }
 
@@ -2373,7 +2365,7 @@ static int8_t negative_excited_accel(struct bmi08x_sensor_data *accel_neg, struc
     if (rslt == BMI08X_OK)
     {
         /* Read accel data after 50ms delay */
-        dev->delay_us(BMI08X_MS_TO_US(BMI08X_SELF_TEST_DATA_READ_MS), dev->intf_ptr_accel);
+        port_delay_us(BMI08X_MS_TO_US(BMI08X_SELF_TEST_DATA_READ_MS));
         rslt = bmi08a_get_data(accel_neg, dev);
 
         if (rslt == BMI08X_OK)
@@ -2877,7 +2869,7 @@ static int8_t write_config_file(struct bmi08x_dev *dev)
             if (rslt == BMI08X_OK)
             {
                 /* Wait until APS disable is set. Refer the data-sheet for more information */
-                dev->delay_us(450, dev->intf_ptr_accel);
+                port_delay_us(450);
 
                 /* Disable config loading */
                 rslt = bmi08a_set_regs(BMI08X_REG_ACCEL_INIT_CTRL, &config_load, 1, dev);
@@ -2902,7 +2894,7 @@ static int8_t write_config_file(struct bmi08x_dev *dev)
                     if (rslt == BMI08X_OK)
                     {
                         /* Wait till ASIC is initialized. Refer the data-sheet for more information */
-                        dev->delay_us(BMI08X_MS_TO_US(BMI08X_ASIC_INIT_TIME_MS), dev->intf_ptr_accel);
+                        port_delay_us(BMI08X_MS_TO_US(BMI08X_ASIC_INIT_TIME_MS));
 
                         /* Check for config initialization status (1 = OK)*/
                         rslt = bmi08a_get_regs(BMI08X_REG_ACCEL_INTERNAL_STAT, &reg_data, 1, dev);

@@ -3,102 +3,102 @@
 #define INC_ENCODER_HPP_
 
 #include "encoder_hw.h"
+#include "time_hw.h"
 
 #define ENCODER_OK PICO_OK
-#define ENCODER_NEWDATA (ENCODER_OK + 1)
 #define ENCODER_ERROR PICO_ERROR_GENERIC
 
-class Encoder_s
+template<typename T>
+class Encoder
 {
-    struct Config_s
-    {
-        encoder_hw_inst_t Encoder_hw;
-        freqcnt_hw_inst_t Freqcnt_hw;
-        absolute_time_t SamplingPeriod;
-        int RPM_min;
-        int RPM_max;
-        int PPR;//7
-        int Reduction;//4
-        int Oersampling;//4
-        float WheelDiameter;//22.0f/1000
-    };
     encoder_hw_inst_t Encoder_hw;
-    freqcnt_hw_inst_t Freqcnt_hw;
-    absolute_time_t SamplingPeriod;
+    uint64_t SamplingPeriod;
 
     int RPM_min;
     int RPM_max;
     int PPR;//7
     int Reduction;//4
     int Oersampling;//4
-    float WheelDiameter;//22.0f/1000
+    T WheelDiameter;//22.0f/1000
 
-    float WheelLength; //WheelDiameter * M_PI
-    float Ratio;
+    T WheelLength; //WheelDiameter * M_PI
+    T Ratio;
 
-    float RPM;
-    float RPM_;
-    float RPS;
-    float RPS_;
-    float MPS;
-    float MPS_;
+    bool Enabled;
+    uint64_t TimeStamp;
+
+public:
+    struct Config
+    {
+        uint64_t SamplingPeriod;
+        int RPM_min;
+        int RPM_max;
+        int PPR;//7
+        int Reduction;//4
+        int Oersampling;//4
+        T WheelDiameter;//22.0f/1000
+    };
 
     int32_t StepsLast;
     int32_t StepsDelta;
     uint32_t CountsLast;
     uint32_t CountsDelta;
+    T RPM;
+    T RPM_;
+    T RPS;
+    T RPS_;
+    T MPS;
+    T MPS_;
 
-    bool Enabled;
-    absolute_time_t TimeStamp;
-public:
-    typedef Config_s Config_t;
-
-    int Init(void)
+    int Init(const encoder_hw_inst_t& hw)
     {
+        Encoder_hw = hw;
         if (encoder_hw_init(&Encoder_hw) != ENCODER_HW_OK) return ENCODER_ERROR;
-        if (freqcnt_init(&Freqcnt_hw) != ENCODER_HW_OK) return ENCODER_ERROR;
 
-        Ratio = 1000000.0f / (PPR * Oersampling * Reduction);
-        WheelLength = WheelDiameter * M_PI;
-        Enabled = false;
+        Stop();
         
         return ENCODER_OK;
     }
 
-    int Init(Config_t _Config)
+    int Init(const encoder_hw_inst_t& hw, const Config& config)
     {
-        LoadConfiguration(_Config);
+        if (Init(hw) != ENCODER_OK) return ENCODER_ERROR;
 
-        return Init();
+        LoadConfig(config);
+
+        return ENCODER_OK;
     }
 
-    int Start(absolute_time_t time)
+    int Start(const uint64_t& time = TIME_U64())
     {
         if (Enabled) return ENCODER_OK;
+
+        encoder_hw_enable(&Encoder_hw);
+
         TimeStamp = time;
         Enabled = true;
 
         return ENCODER_OK;
     }
 
-    int Update(absolute_time_t time)
+    int Update(const uint64_t& time = TIME_U64())
     {
         if (Enabled)
         {
-            auto dt = absolute_time_diff_us(TimeStamp, time);
+            auto dt = (time - TimeStamp);
             if (dt > SamplingPeriod)
             {
                 auto steps = encoder_get_step_count(&Encoder_hw);
-                auto counts = freqcnt_get_pulse_count(&Freqcnt_hw);
+                auto counts = encoder_get_pulse_count(&Encoder_hw);
 
                 StepsDelta = steps - StepsLast;
-                CountsDelta = counts - CountsLast;
+                CountsDelta = counts;
                 auto tmp = Ratio / dt;
 
                 RPS  = StepsDelta  * tmp;
-                RPS_ = CountsDelta * tmp;
-                RPM  = 60 * RPS;
-                RPM_ = 60 * RPS_;
+                RPS_ = CountsDelta * tmp * 4;
+                RPM  = RPS  * 60;
+                RPM_ = RPS_ * 60;
 
                 MPS  = RPS * WheelLength;
                 MPS_ = RPS_ * WheelLength;
@@ -106,8 +106,6 @@ public:
                 StepsLast = steps;
                 CountsLast = counts;
                 TimeStamp = time;
-
-                return ENCODER_NEWDATA;
             }
         }
 
@@ -116,29 +114,30 @@ public:
 
     int Stop(void)
     {
+        encoder_hw_disable(&Encoder_hw);
+
         Enabled = false;
 
         return ENCODER_OK;
     }
 
-    void LoadConfiguration(Config_t _Config)
+    void LoadConfig(const Config& config)
     {
-        Encoder_hw = _Config.Encoder_hw;
-        Freqcnt_hw = _Config.Freqcnt_hw;
-        SamplingPeriod = _Config.SamplingPeriod;
-        RPM_min = _Config.RPM_min;
-        RPM_max = _Config.RPM_max;
-        PPR = _Config.PPR;//7
-        Reduction = _Config.Reduction;//4
-        Oersampling = _Config.Oersampling;//4
-        WheelDiameter = _Config.WheelDiameter;//22.0f/1000
+        SamplingPeriod = config.SamplingPeriod;
+        RPM_min = config.RPM_min;
+        RPM_max = config.RPM_max;
+        PPR = config.PPR;//7
+        Reduction = config.Reduction;//4
+        Oersampling = config.Oersampling;//4
+        WheelDiameter = config.WheelDiameter;//22.0f/1000
+
+        Ratio = 1000000 / (T)(PPR * Oersampling * Reduction);
+        WheelLength = WheelDiameter * M_PI;
     }
 
-	Config_t GetConfiguration(void)
+	Config GetConfig(void)
     {
         return {
-            .Encoder_hw = Encoder_hw,
-            .Freqcnt_hw = Freqcnt_hw,
             .SamplingPeriod = SamplingPeriod,
             .RPM_min = RPM_min,
             .RPM_max = RPM_max,

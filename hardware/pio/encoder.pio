@@ -28,14 +28,13 @@
     JMP update    ; read 00
     JMP increment ; read 01
 decrement:
-    JMP Y--, update [2] ; read 10
+    JMP Y--, update ; read 10
 .wrap_target
 update:
     MOV ISR, Y      ; read 11
     PUSH noblock
     OUT ISR, 2
     IN PINS, 2
-movosr:
     MOV OSR, ISR
     MOV PC, ISR
 increment:

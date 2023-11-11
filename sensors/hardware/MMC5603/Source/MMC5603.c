@@ -9,13 +9,9 @@ int MMC5603_ReadByte(MMC5603_inst_t *inst, uint8_t index, uint8_t *data);
 int MMC5603_ReadAllRegs(MMC5603_inst_t *inst);
 int MMC5603_Reset(MMC5603_inst_t *inst);
 
-int MMC5603_init(MMC5603_inst_t *inst, port_i2c_t *port_inst, int8_t port_channel, uint8_t device_address)
+int MMC5603_init(MMC5603_inst_t *inst)
 {
     int status = MMC5603_OK;
-
-    inst->port_inst = port_inst;
-    inst->port_channel = port_channel;
-    inst->device_address = device_address;
 
     status |= MMC5603_Reset(inst);
     port_delay(50);
@@ -29,7 +25,7 @@ int MMC5603_WriteByte(MMC5603_inst_t *inst, uint8_t index, uint8_t data)
 	int status = MMC5603_OK;
     uint8_t buff[] = {index, data};
 
-    status |= port_i2c_write(inst->port_inst, inst->port_channel, inst->device_address, buff, sizeof(buff));
+    status |= port_write(&inst->port_device, buff, sizeof(buff));
 
     if (status < MMC5603_OK) return MMC5603_ERROR;
     return MMC5603_OK;
@@ -39,8 +35,8 @@ int MMC5603_ReadByte(MMC5603_inst_t *inst, uint8_t index, uint8_t *data)
 {
 	int status = MMC5603_OK;
 
-    status |= port_i2c_write(inst->port_inst, inst->port_channel, inst->device_address, &index, sizeof(index));
-	status |= port_i2c_read(inst->port_inst, inst->port_channel, inst->device_address, data, sizeof(uint8_t));
+    status |= port_write(&inst->port_device, &index, sizeof(index));
+	status |= port_read(&inst->port_device, data, sizeof(uint8_t));
 
     if (status < MMC5603_OK) return MMC5603_ERROR;
     return MMC5603_OK;
@@ -50,8 +46,8 @@ int MMC5603_ReadMulti(MMC5603_inst_t *inst, uint8_t index, uint8_t *data, uint32
 {
 	int status = MMC5603_OK;
 
-    status |= port_i2c_write(inst->port_inst, inst->port_channel, inst->device_address, &index, sizeof(index));
-	status |= port_i2c_read(inst->port_inst, inst->port_channel, inst->device_address, data, size);
+    status |= port_write(&inst->port_device, &index, sizeof(index));
+	status |= port_read(&inst->port_device, data, size);
 
     if (status < MMC5603_OK) return MMC5603_ERROR;
     return MMC5603_OK;

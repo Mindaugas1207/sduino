@@ -92,9 +92,7 @@ struct __attribute__((__packed__)) MMC5603_data_s {
 };
 
 typedef struct {
-    port_i2c_t *port_inst;
-    int8_t port_channel;
-    uint8_t device_address;
+    port_device_t port_device;
     struct MMC5603_data_s reg_data;
     struct {
         int32_t x;
@@ -104,7 +102,7 @@ typedef struct {
     float Temperature;
 } MMC5603_inst_t;
 
-int MMC5603_init(MMC5603_inst_t *inst, port_i2c_t *port_inst, int8_t port_channel, uint8_t device_address);
+int MMC5603_init(MMC5603_inst_t *inst);
 int MMC5603_GetStatus(MMC5603_inst_t *inst, uint8_t *pStatus);
 int MMC5603_NewDataReady(MMC5603_inst_t *inst);
 int MMC5603_StartMeas(MMC5603_inst_t *inst);

@@ -14,10 +14,12 @@
 #define MOTOR_DRIVER_HW_ERROR PICO_ERROR_GENERIC
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
-typedef struct {
+typedef struct
+{
     uint PinA;
     uint PinB;
     uint32_t Frequency;
@@ -30,14 +32,28 @@ static int motor_driver_hw_init(motor_driver_hw_inst_t *inst)
     gpio_set_function(inst->PinB, GPIO_FUNC_PWM);
     uint pwmA = pwm_gpio_to_slice_num(inst->PinA);
     uint pwmB = pwm_gpio_to_slice_num(inst->PinB);
-    pwm_set_clkdiv(pwmA, (double)clock_get_hz (clk_sys) / inst->Frequency);
-    pwm_set_clkdiv(pwmB, (double)clock_get_hz (clk_sys) / inst->Frequency);
+    pwm_set_clkdiv(pwmA, (double)clock_get_hz(clk_sys) / inst->Frequency);
+    pwm_set_clkdiv(pwmB, (double)clock_get_hz(clk_sys) / inst->Frequency);
     pwm_set_wrap(pwmA, inst->Period);
     pwm_set_wrap(pwmB, inst->Period);
     pwm_set_gpio_level(inst->PinA, 0);
     pwm_set_gpio_level(inst->PinB, 0);
-    pwm_set_enabled(pwmA, true);
-    pwm_set_enabled(pwmB, true);
+
+    return MOTOR_DRIVER_HW_OK;
+}
+
+static int motor_driver_hw_enable(motor_driver_hw_inst_t *inst)
+{
+    pwm_set_enabled(pwm_gpio_to_slice_num(inst->PinA), true);
+    pwm_set_enabled(pwm_gpio_to_slice_num(inst->PinB), true);
+
+    return MOTOR_DRIVER_HW_OK;
+}
+
+static int motor_driver_hw_disable(motor_driver_hw_inst_t *inst)
+{
+    pwm_set_enabled(pwm_gpio_to_slice_num(inst->PinA), false);
+    pwm_set_enabled(pwm_gpio_to_slice_num(inst->PinB), false);
 
     return MOTOR_DRIVER_HW_OK;
 }

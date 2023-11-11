@@ -44,6 +44,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include "port.h"
 
 /*********************************************************************/
 /** \name       Common macros                   */
@@ -84,13 +85,6 @@
 
 #ifndef FALSE
 #define FALSE                    UINT8_C(0)
-#endif
-
-/**
- * BMI08X_INTF_RET_TYPE is the read/write interface return type which can be overwritten by the build system.
- */
-#ifndef BMI08X_INTF_RET_TYPE
-#define BMI08X_INTF_RET_TYPE     int8_t
 #endif
 
 /**
@@ -742,58 +736,6 @@ enum  bmi08x_variant {
     BMI088_VARIANT = 1
 };
 
-/*************************** Data structures *****************************/
-
-/**\name    Typedef definitions */
-
-/*!
- * @brief Bus communication function pointer which should be mapped to
- * the platform specific read and write functions of the user
- */
-
-/*!
- * @brief Bus communication function pointer which should be mapped to
- * the platform specific read functions of the user
- *
- * @param[in]     reg_addr : 8bit register address of the sensor
- * @param[out]    reg_data : Data from the specified address
- * @param[in]     length   : Length of the reg_data array
- * @param[in,out] intf_ptr : Void pointer that can enable the linking of descriptors
- *                           for interface related callbacks
- * @retval 0 for Success
- * @retval Non-zero for Failure
- */
-typedef BMI08X_INTF_RET_TYPE (*bmi08x_read_fptr_t)(uint8_t reg_addr, uint8_t *reg_data, uint32_t len, void *intf_ptr);
-
-/*!
- * @brief Bus communication function pointer which should be mapped to
- * the platform specific write functions of the user
- *
- * @param[in]     reg_addr : 8bit register address of the sensor
- * @param[out]    reg_data : Data to the specified address
- * @param[in]     length   : Length of the reg_data array
- * @param[in,out] intf_ptr : Void pointer that can enable the linking of descriptors
- *                           for interface related callbacks
- * @retval 0 for Success
- * @retval Non-zero for Failure
- *
- */
-typedef BMI08X_INTF_RET_TYPE (*bmi08x_write_fptr_t)(uint8_t reg_addr, const uint8_t *reg_data, uint32_t len,
-                                                    void *intf_ptr);
-
-/*!
- * @brief Delay function pointer which should be mapped to
- * delay function of the user
- *
- * @param[in] period              : Delay in microseconds.
- * @param[in, out] intf_ptr       : Void pointer that can enable the linking of descriptors
- *                                  for interface related call backs
- *
- */
-typedef void (*bmi08x_delay_us_fptr_t)(uint32_t period, void *intf_ptr);
-
-/**\name    Structure Definitions */
-
 /*!
  *  @brief Sensor XYZ data structure
  */
@@ -863,15 +805,6 @@ struct bmi08x_err_reg
 #define BMI08X_ACCEL_DATA_SYNC_MODE_400HZ   0x01
 #define BMI08X_ACCEL_DATA_SYNC_MODE_1000HZ  0x02
 #define BMI08X_ACCEL_DATA_SYNC_MODE_2000HZ  0x03
-
-/*!
- *  @brief Data Sync config structure
- */
-struct bmi08x_data_sync_cfg
-{
-    /*! Mode (0 = off, 1 = 400Hz, 2 = 1kHz, 3 = 2kHz) */
-    uint8_t mode;
-};
 
 /*!
  *  @brief Enum to select accelerometer Interrupt pins
@@ -979,24 +912,6 @@ struct bmi08x_gyro_int_channel_cfg
 };
 
 /*!
- *  @brief Interrupt Configuration structure
- */
-struct bmi08x_int_cfg
-{
-    /*! Configuration of first accel interrupt channel */
-    struct bmi08x_accel_int_channel_cfg accel_int_config_1;
-
-    /*! Configuration of second accel interrupt channel */
-    struct bmi08x_accel_int_channel_cfg accel_int_config_2;
-
-    /*! Configuration of first gyro interrupt channel */
-    struct bmi08x_gyro_int_channel_cfg gyro_int_config_1;
-
-    /*! Configuration of second gyro interrupt channel */
-    struct bmi08x_gyro_int_channel_cfg gyro_int_config_2;
-};
-
-/*!
  *  @brief Accel Fifo configurations
  */
 struct bmi08x_accel_fifo_config
@@ -1087,10 +1002,10 @@ struct bmi08x_dev
     uint8_t gyro_chip_id;
 
     /*! Interface function pointer used to enable the device address for I2C and chip selection for SPI */
-    void *intf_ptr_accel;
+    port_device_t intf_accel;
 
     /*! Interface function pointer used to enable the device address for I2C and chip selection for SPI */
-    void *intf_ptr_gyro;
+    port_device_t intf_gyro;
 
     /*! Interface Selection
      * For SPI, interface = BMI08X_SPI_INTF
@@ -1110,6 +1025,21 @@ struct bmi08x_dev
     /*! Structure to configure gyro sensor  */
     struct bmi08x_cfg gyro_cfg;
 
+    /*! Mode (0 = off, 1 = 400Hz, 2 = 1kHz, 3 = 2kHz) */
+    uint8_t sync_mode;
+
+     /*! Configuration of first accel interrupt channel */
+    struct bmi08x_accel_int_channel_cfg accel_int_config_1;
+
+    /*! Configuration of second accel interrupt channel */
+    struct bmi08x_accel_int_channel_cfg accel_int_config_2;
+
+    /*! Configuration of first gyro interrupt channel */
+    struct bmi08x_gyro_int_channel_cfg gyro_int_config_1;
+
+    /*! Configuration of second gyro interrupt channel */
+    struct bmi08x_gyro_int_channel_cfg gyro_int_config_2;
+
     /*! Config stream data buffer address will be assigned */
     const uint8_t *config_file_ptr;
 
@@ -1117,17 +1047,8 @@ struct bmi08x_dev
      * To be set by the user */
     uint8_t read_write_len;
 
-    /*! Read function pointer */
-    bmi08x_read_fptr_t read;
-
-    /*! Write function pointer */
-    bmi08x_write_fptr_t write;
-
-    /*! Delay function pointer */
-    bmi08x_delay_us_fptr_t delay_us;
-
     /*! Variable to store result of read/write function */
-    BMI08X_INTF_RET_TYPE intf_rslt;
+    int intf_rslt;
 };
 
 #endif /* BMI08X_DEFS_H_ */

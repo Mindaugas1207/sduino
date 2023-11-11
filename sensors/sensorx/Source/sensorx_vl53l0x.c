@@ -9,27 +9,26 @@
 
 #define SENSORX_DEBUG
 
-int SENSORX_VL53L0X_Init(SENSORX_VL53L0X_t *sensor, port_i2c_t *port_inst, int8_t port_channel, uint8_t device_address, uint8_t device_enum)
+int SENSORX_VL53L0X_Init(SENSORX_VL53L0X_t *sensor, port_device_t *port_device, uint8_t device_enum)
 {
 	VL53L0X_Dev_t *device = &(sensor->device);
 	VL53L0X_Error Status = VL53L0X_ERROR_NONE;
-	device->port_inst = port_inst;
-	device->port_channel = port_channel;
+	device->port_device = port_device;
 	device->device_enum = device_enum;
 	
 	// if (port_i2c_device_check(port_inst, port_channel, device_address))
 	// 	device->device_address = device_address;
 	// else if (port_i2c_device_check(port_inst, port_channel, VL53L0X_DEFAULT_ADDRESS))
-		device->device_address = VL53L0X_DEFAULT_ADDRESS;
+	device->port_device->hw_address = VL53L0X_DEFAULT_ADDRESS;
 	// else
 	// 	return SENSORX_ERROR;
 
 	Status |= VL53L0X_DataInit(device);
 	Status |= VL53L0X_StaticInit(device);
-	if (device->device_address != device_address)
+	if (device->port_device->hw_address != port_device->hw_address)
 	{
-		Status |= VL53L0X_SetDeviceAddress(device, device_address<<1);
-		device->device_address = device_address;
+		Status |= VL53L0X_SetDeviceAddress(device, port_device->hw_address << 1);
+		device->port_device->hw_address = port_device->hw_address;
 	}
 	
 	if (Status != VL53L0X_ERROR_NONE) return SENSORX_ERROR;

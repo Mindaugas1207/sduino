@@ -351,7 +351,7 @@ VL53L0X_Error VL53L0X_WriteMulti(VL53L0X_DEV Dev, uint8_t index, uint8_t *pData,
 	buff[0] = index;
 	memcpy(&buff[1], pData, count);
 	
-	status |= port_i2c_write(Dev->port_inst, Dev->port_channel, Dev->device_address, buff, sizeof(buff));
+	status |= port_write(Dev->port_device, buff, sizeof(buff));
 
 	if (status < PORT_OK) return VL53L0X_ERROR_CONTROL_INTERFACE;
     return VL53L0X_ERROR_NONE;
@@ -361,8 +361,8 @@ VL53L0X_Error VL53L0X_ReadMulti(VL53L0X_DEV Dev, uint8_t index, uint8_t *pData, 
 {
 	int status = VL53L0X_ERROR_NONE;
 
-    status |= port_i2c_write(Dev->port_inst, Dev->port_channel, Dev->device_address, &index, sizeof(index));
-	status |= port_i2c_read(Dev->port_inst, Dev->port_channel, Dev->device_address, pData, count);
+    status |= port_write(Dev->port_device, &index, sizeof(index));
+	status |= port_read(Dev->port_device, pData, count);
 
 	if (status < PORT_OK) return VL53L0X_ERROR_CONTROL_INTERFACE;
     return VL53L0X_ERROR_NONE;
@@ -374,7 +374,7 @@ VL53L0X_Error VL53L0X_WrByte(VL53L0X_DEV Dev, uint8_t index, uint8_t data)
 	int status = VL53L0X_ERROR_NONE;
     uint8_t buff[] = {index, data};
 
-    status |= port_i2c_write(Dev->port_inst, Dev->port_channel, Dev->device_address, buff, sizeof(buff));
+    status |= port_write(Dev->port_device, buff, sizeof(buff));
 
 	if (status < PORT_OK) return VL53L0X_ERROR_CONTROL_INTERFACE;
 	return VL53L0X_ERROR_NONE;
@@ -385,7 +385,7 @@ VL53L0X_Error VL53L0X_WrWord(VL53L0X_DEV Dev, uint8_t index, uint16_t data)
 	int status = VL53L0X_ERROR_NONE;
     uint8_t buff[] = {index, data >> 8, data};
 
-    status |= port_i2c_write(Dev->port_inst, Dev->port_channel, Dev->device_address, buff, sizeof(buff));
+    status |= port_write(Dev->port_device, buff, sizeof(buff));
 
     if (status < PORT_OK) return VL53L0X_ERROR_CONTROL_INTERFACE;
     return VL53L0X_ERROR_NONE;
@@ -396,7 +396,7 @@ VL53L0X_Error VL53L0X_WrDWord(VL53L0X_DEV Dev, uint8_t index, uint32_t data)
 	int status = VL53L0X_ERROR_NONE;
     uint8_t buff[] = {index, data >> 24, data >> 16, data >> 8, data};
 
-    status |= port_i2c_write(Dev->port_inst, Dev->port_channel, Dev->device_address, buff, sizeof(buff));
+    status |= port_write(Dev->port_device, buff, sizeof(buff));
 
 	if (status < PORT_OK) return VL53L0X_ERROR_CONTROL_INTERFACE;
     return VL53L0X_ERROR_NONE;
@@ -407,13 +407,13 @@ VL53L0X_Error VL53L0X_UpdateByte(VL53L0X_DEV Dev, uint8_t index, uint8_t AndData
 	int status = VL53L0X_ERROR_NONE;
 	uint8_t data;
 
-    status |= port_i2c_write(Dev->port_inst, Dev->port_channel, Dev->device_address, &index, sizeof(index));
-	status |= port_i2c_read(Dev->port_inst, Dev->port_channel, Dev->device_address, &data, sizeof(uint8_t));
+    status |= port_write(Dev->port_device, &index, sizeof(index));
+	status |= port_read(Dev->port_device, &data, sizeof(uint8_t));
 
 	data = (data & AndData) | OrData;
 
 	uint8_t buff[] = {index, data};
-    status |= port_i2c_write(Dev->port_inst, Dev->port_channel, Dev->device_address, buff, sizeof(buff));
+    status |= port_write(Dev->port_device, buff, sizeof(buff));
 
 	if (status < PORT_OK) return VL53L0X_ERROR_CONTROL_INTERFACE;
     return VL53L0X_ERROR_NONE;
@@ -423,8 +423,8 @@ VL53L0X_Error VL53L0X_RdByte(VL53L0X_DEV Dev, uint8_t index, uint8_t *data)
 {
 	int status = VL53L0X_ERROR_NONE;
 
-    status |= port_i2c_write(Dev->port_inst, Dev->port_channel, Dev->device_address, &index, sizeof(index));
-	status |= port_i2c_read(Dev->port_inst, Dev->port_channel, Dev->device_address, data, sizeof(uint8_t));
+    status |= port_write(Dev->port_device, &index, sizeof(index));
+	status |= port_read(Dev->port_device, data, sizeof(uint8_t));
 
 	if (status < PORT_OK) return VL53L0X_ERROR_CONTROL_INTERFACE;
     return VL53L0X_ERROR_NONE;
@@ -435,8 +435,8 @@ VL53L0X_Error VL53L0X_RdWord(VL53L0X_DEV Dev, uint8_t index, uint16_t *data)
 	int status = VL53L0X_ERROR_NONE;
     uint8_t buff[sizeof(uint16_t)];
 
-    status |= port_i2c_write(Dev->port_inst, Dev->port_channel, Dev->device_address, &index, sizeof(index));
-	status |= port_i2c_read(Dev->port_inst, Dev->port_channel, Dev->device_address, buff, sizeof(uint16_t));
+    status |= port_write(Dev->port_device, &index, sizeof(index));
+	status |= port_read(Dev->port_device, buff, sizeof(uint16_t));
 
     *data = ((uint16_t)buff[0] << 8) | (uint16_t)buff[1];
 
@@ -449,8 +449,8 @@ VL53L0X_Error VL53L0X_RdDWord(VL53L0X_DEV Dev, uint8_t index, uint32_t *data)
 	int status = VL53L0X_ERROR_NONE;
     uint8_t buff[sizeof(uint32_t)];
 
-    status |= port_i2c_write(Dev->port_inst, Dev->port_channel, Dev->device_address, &index, sizeof(index));
-	status |= port_i2c_read(Dev->port_inst, Dev->port_channel, Dev->device_address, buff, sizeof(uint32_t));
+    status |= port_write(Dev->port_device, &index, sizeof(index));
+	status |= port_read(Dev->port_device, buff, sizeof(uint32_t));
 
 	*data = ((uint32_t)buff[0] << 24) | ((uint32_t)buff[1] << 16) | ((uint32_t)buff[2] << 8) | (uint32_t)buff[3];
 

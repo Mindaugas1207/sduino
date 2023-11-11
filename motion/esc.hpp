@@ -3,6 +3,7 @@
 #define INC_ESC_HPP_
 
 #include "esc_hw.h"
+#include "time_hw.h"
 
 #define ESC_OK PICO_OK
 #define ESC_RAMP (ESC_OK + 1)
@@ -10,19 +11,10 @@
 #define ESC_IDLE (ESC_OK + 3)
 #define ESC_ERROR PICO_ERROR_GENERIC
 
-class ESC_s {
-    struct Config_s
-    {
-        esc_hw_inst_t Esc_hw;
-        absolute_time_t RampUpPeriod;
-        float Min;
-        float Max;
-        float Power;
-        float StartingPower;
-    };
-
+class ESC
+{
     esc_hw_inst_t Esc_hw;
-    absolute_time_t RampUpPeriod;
+    uint64_t RampUpPeriod;
 
     float Min;
     float Max;
@@ -32,15 +24,24 @@ class ESC_s {
 
     bool Enabled;
     bool RampUp;
-    absolute_time_t TimeStamp;
+    uint64_t TimeStamp;
+
 public:
-    typedef Config_s Config_t;
-
-    void  SetPower(float _Power) { Power = _Power; }
-    float GetPower(float _Power) { return Power; }
-
-    int Init(void)
+    struct Config
     {
+        uint64_t RampUpPeriod;
+        float Min;
+        float Max;
+        float Power;
+        float StartingPower;
+    };
+
+    void   SetPower(const float& power) { Power = power; }
+    float& GetPower(void)               { return Power;  }
+
+    int Init(const esc_hw_inst_t& hw)
+    {
+        Esc_hw = hw;
         if (esc_hw_init(&Esc_hw) != ESC_HW_OK) return ESC_ERROR;
 
         Stop();
@@ -48,16 +49,22 @@ public:
         return ESC_OK;
     }
     
-    int Init(Config_t _Config)
+    int Init(const esc_hw_inst_t& hw, const Config& config)
     {
-        LoadConfiguration(_Config);
+        if (Init(hw) != ESC_OK) return ESC_ERROR;
 
-        return Init();
+        LoadConfig(config);
+
+        Stop();
+        
+        return ESC_OK;
     }
 
-    int Start(absolute_time_t time)
+    int Start(const uint64_t& time = TIME_U64())
     {
         if (Enabled) return ESC_OK;
+
+        //esc_hw_enable(&Esc_hw);
         
         Setpoint = -Power; //this forces update to run even in case the power and setpoint are equal
         Enabled = true;
@@ -67,7 +74,7 @@ public:
         return ESC_OK;
     }
 
-    int Update(absolute_time_t time)
+    int Update(const uint64_t& time = TIME_U64())
     {
         if (Enabled)
         {
@@ -75,7 +82,7 @@ public:
 
             if (RampUp)
             {
-                auto dt = absolute_time_diff_us(TimeStamp, time);
+                auto dt = time - TimeStamp;
 
                 if (dt < RampUpPeriod)
                 {
@@ -108,26 +115,25 @@ public:
     int Stop(void)
     {
         esc_hw_set_pulse(&Esc_hw, Min * Esc_hw.Period);
+        //esc_hw_disable(&Esc_hw);
 
         Enabled = false;
 
         return ESC_OK;
     }
 
-    void LoadConfiguration(Config_t _Config)
+    void LoadConfig(const Config& config)
     {
-        Esc_hw = _Config.Esc_hw;
-        RampUpPeriod = _Config.RampUpPeriod;
-        Min = _Config.Min;
-        Max = _Config.Max;
-        Power = _Config.Power;
-        StartingPower = _Config.StartingPower;
+        RampUpPeriod = config.RampUpPeriod;
+        Min = config.Min;
+        Max = config.Max;
+        Power = config.Power;
+        StartingPower = config.StartingPower;
     }
 
-	Config_t GetConfiguration(void)
+	Config GetConfig(void)
     {
         return {
-            .Esc_hw = Esc_hw,
             .RampUpPeriod = RampUpPeriod,
             .Min = Min,
             .Max = Max,

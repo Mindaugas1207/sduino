@@ -14,10 +14,12 @@
 #define ESC_HW_ERROR PICO_ERROR_GENERIC
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
-typedef struct {
+typedef struct
+{
     uint Pin;
     uint32_t Frequency;
     uint32_t Period;
@@ -27,10 +29,24 @@ static int esc_hw_init(esc_hw_inst_t *inst)
 {
     gpio_set_function(inst->Pin, GPIO_FUNC_PWM);
     uint pwm = pwm_gpio_to_slice_num(inst->Pin);
-    pwm_set_clkdiv(pwm, (double)clock_get_hz (clk_sys) / inst->Frequency);
+    pwm_set_clkdiv(pwm, (double)clock_get_hz(clk_sys) / inst->Frequency);
     pwm_set_wrap(pwm, inst->Period);
     pwm_set_gpio_level(inst->Pin, 0);
-    pwm_set_enabled(pwm, true);
+    pwm_set_enabled(pwm_gpio_to_slice_num(inst->Pin), true);
+
+    return ESC_HW_OK;
+}
+
+static int esc_hw_enable(esc_hw_inst_t *inst)
+{
+    pwm_set_enabled(pwm_gpio_to_slice_num(inst->Pin), true);
+
+    return ESC_HW_OK;
+}
+
+static int esc_hw_disable(esc_hw_inst_t *inst)
+{
+    pwm_set_enabled(pwm_gpio_to_slice_num(inst->Pin), false);
 
     return ESC_HW_OK;
 }

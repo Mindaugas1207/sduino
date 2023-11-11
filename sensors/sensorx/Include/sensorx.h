@@ -24,7 +24,7 @@ typedef struct {
 	VL53L0X_Config_t config;
 } SENSORX_VL53L0X_t;
 
-int SENSORX_VL53L0X_Init(SENSORX_VL53L0X_t *sensor, port_i2c_t *port_inst, int8_t port_channel, uint8_t device_address, uint8_t device_enum);
+int SENSORX_VL53L0X_Init(SENSORX_VL53L0X_t *sensor, port_device_t *port_device, uint8_t device_enum);
 int SENSORX_VL53L0X_PerformSingleMeasurement(SENSORX_VL53L0X_t *sensor);
 int SENSORX_VL53L0X_StartMeasurement(SENSORX_VL53L0X_t *sensor);
 int SENSORX_VL53L0X_GetMeasurementData(SENSORX_VL53L0X_t *sensor, VL53L0X_RangingMeasurementData_t *data);

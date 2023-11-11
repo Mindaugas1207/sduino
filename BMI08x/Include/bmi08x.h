@@ -549,7 +549,7 @@ int8_t bmi08a_perform_selftest(struct bmi08x_dev *dev);
  * @retval < 0 -> Fail
  *
  */
-int8_t bmi08a_configure_data_synchronization(struct bmi08x_data_sync_cfg sync_cfg, struct bmi08x_dev *dev);
+int8_t bmi08a_configure_data_synchronization(struct bmi08x_dev *dev);
 
 /**
  * \ingroup bmi08ag
@@ -609,7 +609,7 @@ int8_t bmi08a_get_synchronized_data(struct bmi08x_sensor_data *accel,
  * @retval < 0 -> Fail
  *
  */
-int8_t bmi08a_set_data_sync_int_config(const struct bmi08x_int_cfg *int_config, struct bmi08x_dev *dev);
+int8_t bmi08a_set_data_sync_int_config(struct bmi08x_dev *dev);
 
 /*!
  * \ingroup bmi08aApiInt

@@ -87,7 +87,9 @@
         "variant": "cpp",
         "xlocmon": "cpp",
         "gpio.h": "c",
-        "*.inc": "cpp"
+        "*.inc": "cpp",
+        "nnls": "cpp",
+        "dma.h": "c"
     },
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
     "C_Cpp.default.compilerPath": "c:/program files (x86)/arm gnu toolchain arm-none-eabi/12.2 mpacbti-rel1/bin/arm-none-eabi-g++.exe"

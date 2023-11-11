@@ -306,12 +306,12 @@ int8_t bmi08g_set_regs(uint8_t reg_addr, const uint8_t *reg_data, uint32_t len, 
             /* Delay for suspended mode of the sensor is 450 us */
             if (dev->gyro_cfg.power == BMI08X_GYRO_PM_SUSPEND || dev->gyro_cfg.power == BMI08X_GYRO_PM_DEEP_SUSPEND)
             {
-                dev->delay_us(450, dev->intf_ptr_gyro);
+                port_delay_us(450);
             }
             /* Delay for Normal mode of the sensor is 2 us */
             else if (dev->gyro_cfg.power == BMI08X_GYRO_PM_NORMAL)
             {
-                dev->delay_us(2, dev->intf_ptr_gyro);
+                port_delay_us(2);
             }
             else
             {
@@ -353,7 +353,7 @@ int8_t bmi08g_soft_reset(struct bmi08x_dev *dev)
         if (rslt == BMI08X_OK)
         {
             /* delay 30 ms after writing reset value to its register */
-            dev->delay_us(BMI08X_MS_TO_US(BMI08X_GYRO_SOFTRESET_DELAY), dev->intf_ptr_gyro);
+            port_delay_us(BMI08X_MS_TO_US(BMI08X_GYRO_SOFTRESET_DELAY));
         }
     }
 
@@ -534,7 +534,7 @@ int8_t bmi08g_set_power_mode(struct bmi08x_dev *dev)
                 if (rslt == BMI08X_OK)
                 {
                     /* Time required to switch the power mode */
-                    dev->delay_us(BMI08X_MS_TO_US(BMI08X_GYRO_POWER_MODE_CONFIG_DELAY), dev->intf_ptr_gyro);
+                    port_delay_us(BMI08X_MS_TO_US(BMI08X_GYRO_POWER_MODE_CONFIG_DELAY));
                 }
             }
             else
@@ -921,8 +921,7 @@ static int8_t null_ptr_check(const struct bmi08x_dev *dev)
 {
     int8_t rslt;
 
-    if ((dev == NULL) || (dev->read == NULL) || (dev->write == NULL) || (dev->delay_us == NULL) ||
-        (dev->intf_ptr_gyro == NULL))
+    if (dev == NULL)
     {
         /* Device structure pointer is not valid */
         rslt = BMI08X_E_NULL_PTR;
@@ -950,7 +949,7 @@ static int8_t get_regs(uint8_t reg_addr, uint8_t *reg_data, uint32_t len, struct
     }
 
     /* Read gyro register */
-    dev->intf_rslt = dev->read(reg_addr, reg_data, len, dev->intf_ptr_gyro);
+    dev->intf_rslt = port_read_mem(&dev->intf_gyro, reg_addr, reg_data, len);
 
     if (dev->intf_rslt != BMI08X_INTF_RET_SUCCESS)
     {
@@ -980,7 +979,7 @@ static int8_t set_regs(uint8_t reg_addr, const uint8_t *reg_data, uint32_t len, 
      */
     if (len == 1)
     {
-        dev->intf_rslt = dev->write(reg_addr, reg_data, len, dev->intf_ptr_gyro);
+        dev->intf_rslt = port_write_mem(&dev->intf_gyro, reg_addr, reg_data, len);
 
         if (dev->intf_rslt != BMI08X_INTF_RET_SUCCESS)
         {
@@ -997,7 +996,7 @@ static int8_t set_regs(uint8_t reg_addr, const uint8_t *reg_data, uint32_t len, 
     {
         for (count = 0; count < len; count++)
         {
-            dev->intf_rslt = dev->write(reg_addr, &reg_data[count], 1, dev->intf_ptr_gyro);
+            dev->intf_rslt = port_write_mem(&dev->intf_gyro, reg_addr, &reg_data[count], 1);
 
             reg_addr++;
 

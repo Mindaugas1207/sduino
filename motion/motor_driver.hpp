@@ -3,18 +3,13 @@
 #define INC_MOTOR_DRIVER_HPP_
 
 #include "motor_driver_hw.h"
+#include "time_hw.h"
 
 #define MOTOR_DRIVER_OK PICO_OK
 #define MOTOR_DRIVER_ERROR PICO_ERROR_GENERIC
 
-class MotorDriver_s {
-    struct Config_s
-    {
-        motor_driver_hw_inst_t Driver_hw;
-        float Min;
-        float Max;
-    };
-
+class MotorDriver
+{
     motor_driver_hw_inst_t Driver_hw;
 
     float Min;
@@ -23,15 +18,21 @@ class MotorDriver_s {
     float Setpoint;
 
     bool Enabled;
-    absolute_time_t TimeStamp;
+    uint64_t TimeStamp;
+    
 public:
-    typedef Config_s Config_t;
-
-    void  SetPower(float _Power) { Power = _Power; }
-    float GetPower(float _Power) { return Power; }
-
-    int Init(void)
+    struct Config
     {
+        float Min;
+        float Max;
+    };
+
+    void   SetPower(const float& power) { Power = power; }
+    float& GetPower(void)               { return Power;  }
+
+    int Init(const motor_driver_hw_inst_t& hw)
+    {
+        Driver_hw = hw;
         if (motor_driver_hw_init(&Driver_hw) != MOTOR_DRIVER_HW_OK) return MOTOR_DRIVER_ERROR;
 
         Stop();
@@ -39,16 +40,22 @@ public:
         return MOTOR_DRIVER_OK;
     }
     
-    int Init(Config_t _Config)
+    int Init(const motor_driver_hw_inst_t& hw, const Config& config)
     {
-        LoadConfiguration(_Config);
+        if (Init(hw) != MOTOR_DRIVER_OK) return MOTOR_DRIVER_ERROR;
 
-        return Init();
+        LoadConfig(config);
+
+        Stop();
+
+        return MOTOR_DRIVER_OK;
     }
 
-    int Start(absolute_time_t time)
+    int Start(const uint64_t& time = TIME_U64())
     {
         if (Enabled) return MOTOR_DRIVER_OK;
+
+        motor_driver_hw_enable(&Driver_hw);
 
         Setpoint = -Power; //this forces update to run even in case the power and setpoint are equal
         Enabled = true;
@@ -57,7 +64,7 @@ public:
         return MOTOR_DRIVER_OK;
     }
 
-    int Update(absolute_time_t time)
+    int Update(const uint64_t& time = TIME_U64())
     {
         if (Enabled)
         {
@@ -78,6 +85,7 @@ public:
                 }
 
                 motor_driver_hw_set_pwm(&Driver_hw, pwmA, pwmB);
+                printf("%d, %f, %d, %f, %f\n", pwm, Setpoint, max, Max, Min);
             }
         }
 
@@ -87,6 +95,7 @@ public:
     int Stop(void)
     {
         motor_driver_hw_set_pwm(&Driver_hw, 0U, 0U);
+        motor_driver_hw_disable(&Driver_hw);
 
         Enabled = false;
 
@@ -102,17 +111,15 @@ public:
         return MOTOR_DRIVER_OK;
     }
 
-    void LoadConfiguration(Config_t _Config)
+    void LoadConfig(const Config& config)
     {
-        Driver_hw = _Config.Driver_hw;
-        Min = _Config.Min;
-        Max = _Config.Max;
+        Min = config.Min;
+        Max = config.Max;
     }
 
-	Config_t GetConfiguration(void)
+	Config GetConfig(void)
     {
         return {
-            .Driver_hw = Driver_hw,
             .Min = Min,
             .Max = Max
         };
