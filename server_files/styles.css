@@ -10,15 +10,21 @@ padding: 0;
 
 .left {
 width: 40%;
+text-align:left;
+background-color:Teal;
 }
 
 .middle {
 width: 20%;
 padding: 11px;
+text-align:center;
+background-color:Teal;
 }
 
 .right {
 width: 40%;
+text-align:right;
+background-color:Teal;
 }
 
 .row:after {

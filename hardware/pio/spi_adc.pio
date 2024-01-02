@@ -1,0 +1,132 @@
+
+.define public __SPI_ADC_CNV_COUNT (31)
+.define public __SPI_ADC_BIT_COUNT (12)
+.define public __SPI_ADC_FLAG_STRT ( 6)
+.define public __SPI_ADC_FLAG_MODE ( 5)
+.define public __SPI_ADC_FLAG_IRQ  ( 0)
+
+.program spi_adc_sm0
+.side_set 1
+
+.define public T_CNVH 6
+.define public F_STRT __SPI_ADC_FLAG_STRT
+.define public N_BITS __SPI_ADC_BIT_COUNT
+
+.wrap_target
+    irq wait F_STRT      side 0x0
+    set pins 1           side 0x0 [T_CNVH]
+    set x, (N_BITS - 2)  side 0x0
+    set pins 0           side 0x0
+    wait 0 pin 0         side 0x0 ; clr cnv, wait bussy bit low
+    nop                  side 0x1
+    nop                  side 0x0
+    nop                  side 0x1
+bit_read:
+    in pins, 1           side 0x0
+    jmp x-- bit_read     side 0x1
+    in pins, 1           side 0x0
+.wrap
+
+.program spi_adc_sm1
+
+.define public T_SMPL 5
+.define public F_STRT __SPI_ADC_FLAG_STRT
+.define public F_IRQ  __SPI_ADC_FLAG_IRQ
+
+.wrap_target
+    set pins 1
+    irq wait F_IRQ
+    pull
+    mov x, OSR
+    set pins 0
+cnv_start:
+    wait 1 irq F_STRT
+    jmp x-- cnv_start ; [T_SMPL]
+.wrap
+
+; .program spi_adc
+; .side_set 1
+
+; ; CLK   3 -> side
+; ; DATA  4 -> in
+; ; CNV   5 -> set
+; ; RESET 6 -> set
+
+; ; 60MHz 16.6|ns
+; ; 50MHz 20ns
+; .wrap_target
+;     set pins, 2            side 0 [0] ; SET RESET, multiplexers reset
+;     irq wait 0             side 0 [5] ; IRQ 0, Wait for cpu to process data
+;     set pins, 0            side 0 [0] ; CLR RESET
+;     pull                   side 0 [0] ; PULL the number of conversions requested
+;     mov x, OSR             side 0 [0] ; SET X to number of conversions
+; cnv_loop:
+; ;     set pins, 1            side 0 [6] ; SET CNV, start first conversion
+; ;     set pins, 0            side 0 [0] ; CLR CNV
+; ;     wait 0 pin 0           side 0 [0] ; WAIT for data PIN LOW (bussy indicator bit)
+
+; ;     set y, 6               side 0 [4] ; SET Y to number of first acquisition wait cycles
+; ; acq1_loop:
+; ;     jmp y-- acq1_loop      side 0 [4] ; JMP while Y != 0, decrement Y
+
+;     set y, 31              side 0 [15] ; SET Y to number of first acquisition wait cycles
+; acq1_loop:
+;     jmp y-- acq1_loop      side 0 [15] ; JMP while Y != 0, decrement Y
+;     set y, 31              side 0 [15] ; SET Y to number of first acquisition wait cycles
+; acq2_loop:
+;     jmp y-- acq2_loop      side 0 [15] ; JMP while Y != 0, decrement Y
+;     set y, 31              side 0 [15] ; SET Y to number of first acquisition wait cycles
+; acq3_loop:
+;     jmp y-- acq3_loop      side 0 [15] ; JMP while Y != 0, decrement Y
+
+;     set pins,  1           side 0 [5] ; SET CNV, start second conversion
+;     set y,    11           side 0 [0] ; SET X to number of data bits to read - 2, set the clock pin high
+;     set pins,  0           side 0 [0] ; CLR CNV
+;     wait 0 pin 0           side 0 [0] ; WAIT for data PIN LOW (bussy indicator bit)
+;     nop                    side 1 [0]
+;     nop                    side 0 [0] ; 30 cycles
+;     nop                    side 1 [0]
+; data_loop:
+;     in pins, 1             side 0 [0] ; IN, shift in bits from data pin, set the clock pin low
+;     jmp y-- data_loop      side 1 [0] ; JMP while Y != 0, decrement Y, set the clock pin high
+;     in pins, 1             side 0 [0] ; IN, shift in last bits from data pin, set the clock pin low
+
+;     jmp x-- cnv_loop       side 0 [0] ; JMP while X != 0, decrement X
+; .wrap
+
+
+
+
+
+
+
+; wait
+; nop
+; nop
+; nop
+; in 11
+; jmp 11
+; in 10
+; jmp 10
+; in 9
+; jmp 9
+; in 8
+; jmp 8
+; in 7
+; jmp 7
+; in 6
+; jmp 6
+; in 5
+; jmp 5
+; in 4
+; jmp 4
+; in 3
+; jmp 3
+; in 2
+; jmp 2
+; in 1
+; jmp 1
+; in 0
+; jmp 0
+; in
+; jmp
