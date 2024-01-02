@@ -19,6 +19,7 @@
 #include "hardware/adc.h"
 #include "line_sensor_hw.h"
 #include "line_sensor.hpp"
+#include "distance_sensor.hpp"
 #include "pico/util/queue.h"
 
 #include "led.hpp"
@@ -44,6 +45,23 @@ struct HardwareConfig
     esc_hw_inst_t ESC0;
     imu_hw_inst_t IMU0;
     line_sensor_hw_inst_t LineSensor0;
+    VL53L0X_Dev_t DistanceSensor0;
+};
+
+struct LineFollowerSysConfig
+{
+    float M_Speed;
+    float ESC_Speed;
+    float Kp;
+    float Kd;
+    float Max_Speed;
+    float Ramp_Speed;
+    float Ramp_SpeedDown;
+    uint Wall_Th;
+    float Wall_Speed;
+    float Wall_Angle;
+    uint Wall_time1;
+    uint Wall_time2;
 };
 
 struct LineFollowerConfig
@@ -53,12 +71,39 @@ struct LineFollowerConfig
     ESC::Config ESC0;
     IMU<double>::Config IMU0;
     LineSensor<double>::Config LineSensor0;
+    LineFollowerSysConfig LFCFG;
     //-----------------------------------//
     uint64_t LockCode;
 };
 
+
+
+struct LineFollowerSys
+{
+    bool Start;
+    bool Stop;
+    bool Sleep;
+    bool ESC_Start;
+    bool NVM_Erase_OK;
+    bool NVM_Load_OK;
+    bool NVM_ReLoad_OK;
+    bool NVM_Save_OK;
+    bool Plyta_doing;
+    bool Plyta_done;
+
+    LineFollowerSysConfig Config;
+};
+
 int SduinoInit(const SduinoConfig& config);
 void Init(void);
+
+void ESC_Start(void);
+void ESC_Stop(void);
+
+void Start(void);
+void Stop(void);
+void Wakeup(void);
+void Sleep(void);
 
 void SaveConfig(void);
 void LoadConfig(void);
@@ -84,7 +129,9 @@ inline Encoder<double> EncoderA, EncoderB;
 inline ESC ESC0;
 inline IMU<double> IMU0;
 inline LineSensor<double> LineSensor0;
+inline DistanceSensor DistanceSensor0;
 
 inline LineFollowerConfig Config0;
+inline LineFollowerSys LFSYS;
 
 #endif

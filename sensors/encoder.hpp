@@ -27,6 +27,14 @@ class Encoder
     bool Enabled;
     uint64_t TimeStamp;
 
+    // T GetDeltaT(const uint64_t& time)
+    // {
+    //     T dT = (T)(time - TimeStamp) / 1000000;
+    //     TimeStamp = time;
+
+    //     return dT;
+    // }
+
 public:
     struct Config
     {
@@ -81,6 +89,34 @@ public:
         return ENCODER_OK;
     }
 
+    // int Update(const uint64_t& time = TIME_U64())
+    // {
+    //     return Update(time, GetDeltaT(time));
+    // }
+
+    // std::tuple<float, float, float> XYoffsetEncoders(auto dR, auto dL, float A0)
+    // {
+    //     auto A = dR - dL;
+    //     auto E = (float)(ENCODER_BASE_LENGTH / 2.0) * (dR + dL);
+    //     auto B = E / A;
+    //     float AX, AY, C;
+    //     if (std::isinf(B) || std::isnan(B))
+    //     {
+    //         B = (float)(ENCODER_PULSE_TO_LENGTH / 2.0) * (dR + dL);
+    //         C = 0.0f;
+    //         AX = std::cos(A0);
+    //         AY = std::sin(A0);
+    //     }
+    //     else
+    //     {
+    //         C = (float)(ENCODER_PULSE_TO_LENGTH / ENCODER_BASE_LENGTH) * A;
+    //         AX =   std::sin(C + A0) - std::sin(A0);
+    //         AY = -(std::cos(C + A0) - std::cos(A0));
+    //     }
+        
+    //     return {B * AX, B * AY, C};
+    // }
+
     int Update(const uint64_t& time = TIME_U64())
     {
         if (Enabled)
@@ -93,10 +129,9 @@ public:
 
                 StepsDelta = steps - StepsLast;
                 CountsDelta = counts;
-                auto tmp = Ratio / dt;
 
-                RPS  = StepsDelta  * tmp;
-                RPS_ = CountsDelta * tmp * 4;
+                RPS  = StepsDelta  * Ratio;
+                RPS_ = CountsDelta * Ratio * 4;
                 RPM  = RPS  * 60;
                 RPM_ = RPS_ * 60;
 
@@ -131,7 +166,7 @@ public:
         Oersampling = config.Oersampling;//4
         WheelDiameter = config.WheelDiameter;//22.0f/1000
 
-        Ratio = 1000000 / (T)(PPR * Oersampling * Reduction);
+        Ratio = (SamplingPeriod / (T)(PPR * Oersampling * Reduction)) / 1000000;
         WheelLength = WheelDiameter * M_PI;
     }
 

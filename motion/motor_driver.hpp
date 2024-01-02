@@ -73,19 +73,19 @@ public:
                 Setpoint = Power;
                 uint max = Driver_hw.Period;
                 uint pwmA = max, pwmB = max;
-                int pwm = ((Max - Min) * std::clamp(Setpoint, 0.0f, 1.0f) + Min) * Driver_hw.Period;
+                int pwm = ((Max - Min) * std::clamp(std::abs(Setpoint), 0.0f, 1.0f) + Min) * Driver_hw.Period;
 
-                if (pwm > 0) {
+                if (Setpoint > 0) {
                     pwm = (int)max - pwm;
                     pwmB = pwm < 0 ? 0 : pwm;
                 }
-                else if (pwm < 0) {
-                    pwm = (int)max + pwm;
+                else if (Setpoint < 0) {
+                    pwm = (int)max - pwm;
                     pwmA = pwm < 0 ? 0 : pwm;
                 }
 
                 motor_driver_hw_set_pwm(&Driver_hw, pwmA, pwmB);
-                printf("%d, %f, %d, %f, %f\n", pwm, Setpoint, max, Max, Min);
+                //printf("%d, %f, %d, %f, %f\n", pwm, Setpoint, max, Max, Min);
             }
         }
 

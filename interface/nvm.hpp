@@ -37,11 +37,11 @@ public:
     void erase(void)
     {
         if (!Initialised) return;
-        multicore_lockout_start_blocking();
+        //multicore_lockout_start_blocking();
         uint32_t ints = save_and_disable_interrupts();
         flash_range_erase(AddressOffset, Size);
         restore_interrupts(ints);
-        multicore_lockout_end_blocking();
+        //multicore_lockout_end_blocking();
     }
 
     void load(void)
@@ -53,12 +53,12 @@ public:
     void program(void)
     {
         if (!Initialised) return;
-        multicore_lockout_start_blocking();
+        //multicore_lockout_start_blocking();
         uint32_t ints = save_and_disable_interrupts();
         flash_range_erase(AddressOffset, Size);
         flash_range_program(AddressOffset, ( uint8_t *)UserData, UserDataSize);
         restore_interrupts(ints);
-        multicore_lockout_end_blocking();
+        //multicore_lockout_end_blocking();
         load();
     }
 };

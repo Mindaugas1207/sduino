@@ -7,6 +7,7 @@
 #include "hardware/uart.h"
 #include "string.h"
 #include "functional"
+#include "interface_generator.hpp"
 
 #define INTERFACE_RECEIVE_BUFFER_LENGTH 256
 #define INTERFACE_BULK_TRANSFER_SIZE 1024

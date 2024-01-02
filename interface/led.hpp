@@ -64,8 +64,8 @@ public:
     void Set(const uint32_t& onTime, const uint32_t& offTime, const uint64_t& time = TIME_U64())
     {
         Mode    = BLINK;
-        OnTime  = onTime;
-        OffTime = offTime;
+        OnTime  = onTime * 1000;
+        OffTime = offTime * 1000;
         TimeStamp = time;
         SetState(false);
     }
@@ -73,8 +73,8 @@ public:
     void Set(const uint32_t& onTime, const uint32_t& offTime, const uint32_t& nPulses, const uint64_t& time = TIME_U64() )
     {
         Mode       = PULSE;
-        OnTime     = onTime;
-        OffTime    = offTime;
+        OnTime     = onTime * 1000;
+        OffTime    = offTime * 1000;
         N_Pulses   = nPulses;
         PulseCount = 0;
         PulseEn    = true;

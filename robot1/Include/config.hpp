@@ -70,8 +70,8 @@ inline const HardwareConfig HWConfig = {
             .Pin_DATA = 4,
             .Pin_CNV = 5,
             .Pin_RESET = 6,
-            .fspi = 1000000,//20000000,
-            .fcnv = 1000
+            .fspi = 20000000,//20000000,
+            .fcnv = 32000
         },
         .emitter_hw = {
             .port_device = {
@@ -89,6 +89,16 @@ inline const HardwareConfig HWConfig = {
                 .hw_type = PORT_I2C_MUX
             }
         }
+    },
+    .DistanceSensor0 = {
+        .port_device = {
+            .hw_intf = &I2C_Mux,
+            .hw_intf_index = I2C_MUX_CHANNEL_1,
+            .hw_address = VL53L0X_DEFAULT_ADDRESS,
+            .hw_type = PORT_I2C_MUX
+        },
+        .device_enum = 0,
+        .Pin = 25
     }
 };
 
@@ -104,7 +114,7 @@ inline const LineFollowerConfig DefaultConfig = {
     .EncoderA = {
         .SamplingPeriod = 100 * 1000,
         .RPM_min = 100,
-        .RPM_max = 3000,
+        .RPM_max = 4000,
         .PPR = 7,
         .Reduction = 4,
         .Oersampling = 4,
@@ -113,7 +123,7 @@ inline const LineFollowerConfig DefaultConfig = {
     .EncoderB = {
         .SamplingPeriod = 100 * 1000,
         .RPM_min = 100,
-        .RPM_max = 3000,
+        .RPM_max = 4000,
         .PPR = 7,
         .Reduction = 4,
         .Oersampling = 4,

@@ -41,6 +41,49 @@ class IMU
     bool Calibrated;
     bool CalibrationStarted;
     uint64_t TimeStamp;
+    uint64_t TimeStampCalibration;
+
+    T GetDeltaT(const uint64_t& time)
+    {
+        T dT = (T)(time - TimeStamp) / 1000000;
+        TimeStamp = time;
+
+        return dT;
+    }
+
+    void Compute(const uint64_t& time, const T& deltaT)
+    {
+        Gyroscope.Value     = Gyroscope.Raw - Gyroscope.Bias;
+        Accelerometer.Value = Accelerometer.Raw - Accelerometer.Bias;
+        
+        auto quat = Filter.Compute(Gyroscope.Value, Accelerometer.Value, deltaT);
+        
+        Orientation = quat.EulerAngles();
+    }
+
+    void RunCalibration(const uint64_t& time)
+    {
+        if (time - TimeStampCalibration < CalibrationTime)
+        {
+            Gyroscope.Accum     += Gyroscope.Raw;
+            Accelerometer.Accum += Accelerometer.Raw;
+            AccumulatorSamples++;
+        }
+        else
+        {
+            Gyroscope.Bias     = Gyroscope.Accum     / AccumulatorSamples;
+            Accelerometer.Bias = Accelerometer.Accum / AccumulatorSamples;
+
+            if(Accelerometer.Bias.Z > (T)G_EARTH / 3) Accelerometer.Bias.Z -= (T)G_EARTH;  // Remove gravity from the z-axis accelerometer bias calculation
+            else Accelerometer.Bias.Z += (T)G_EARTH;
+
+            Calibrated = true;
+            CalibrationStarted = false;
+            
+            //printf("DBG:IMU_ACCEL_BIAS(%f,%f,%f)\n", Accelerometer.Bias.X, Accelerometer.Bias.Y, Accelerometer.Bias.Z);
+            //printf("DBG:IMU_GYRO_BIAS(%f,%f,%f)\n", Gyroscope.Bias.X, Gyroscope.Bias.Y, Gyroscope.Bias.Z);
+        }
+    }
     
 public:
     struct Config
@@ -86,11 +129,17 @@ public:
 
         Enabled = true;
         TimeStamp = time;
+        TimeStampCalibration = time;
 
         return IMU_OK;
     }
 
     int Update(const uint64_t& time = TIME_U64())
+    {
+        return Update(time, GetDeltaT(time));
+    }
+
+    int Update(const uint64_t& time, const T& deltaT)
     {
         if (Enabled)
         {
@@ -108,7 +157,7 @@ public:
 
             if (Calibrated)
             {
-                Compute(time);
+                Compute(time, deltaT);
             }
             else if (!CalibrationStarted && IMU_AUTO_CALIBRATE)
             {
@@ -119,29 +168,17 @@ public:
         return IMU_OK;
     }
 
-    void Compute(const uint64_t& time = TIME_U64())
+    void StartCalibration(void)
     {
-        T dT = (T)(time - TimeStamp) / 1000000;
-        Compute(time, dT);
+        Calibrated = false;
+        CalibrationStarted = false;
     }
 
-    void Compute(const uint64_t& time, const T& deltaT)
-    {
-        T dT = deltaT;
-
-        Gyroscope.Value     = Gyroscope.Raw - Gyroscope.Bias;
-        Accelerometer.Value = Accelerometer.Raw - Accelerometer.Bias;
-        
-        auto quat = Filter.Compute(Gyroscope.Value, Accelerometer.Value, dT);
-        
-        Orientation = quat.EulerAngles();
-    }
-
-    void StartCalibration(const uint64_t& time = TIME_U64())
+    void StartCalibration(const uint64_t& time)
     {
         Reset();
 
-        TimeStamp = time;
+        TimeStampCalibration = time;
         Calibrated = false;
         CalibrationStarted = true;
         AccumulatorSamples = 0;
@@ -150,30 +187,6 @@ public:
         Accelerometer.Accum = 0;
 
         //printf("DBG:IMU_CALIBRATION_START\n");
-    }
-
-    void RunCalibration(const uint64_t& time = TIME_U64())
-    {
-        if (time - TimeStamp < CalibrationTime)
-        {
-            Gyroscope.Accum     += Gyroscope.Raw;
-            Accelerometer.Accum += Accelerometer.Raw;
-            AccumulatorSamples++;
-        }
-        else
-        {
-            Gyroscope.Bias     = Gyroscope.Accum     / AccumulatorSamples;
-            Accelerometer.Bias = Accelerometer.Accum / AccumulatorSamples;
-
-            if(Accelerometer.Bias.Z > (T)G_EARTH / 3) Accelerometer.Bias.Z -= (T)G_EARTH;  // Remove gravity from the z-axis accelerometer bias calculation
-            else Accelerometer.Bias.Z += (T)G_EARTH;
-
-            Calibrated = true;
-            CalibrationStarted = false;
-            
-            //printf("DBG:IMU_ACCEL_BIAS(%f,%f,%f)\n", Accelerometer.Bias.X, Accelerometer.Bias.Y, Accelerometer.Bias.Z);
-            //printf("DBG:IMU_GYRO_BIAS(%f,%f,%f)\n", Gyroscope.Bias.X, Gyroscope.Bias.Y, Gyroscope.Bias.Z);
-        }
     }
 
     int Stop(void)

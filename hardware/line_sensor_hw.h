@@ -20,6 +20,7 @@
 #define LINE_SENSOR_HW_RIGHT_CH (0U)
 
 #define LINE_SENSOR_HW_EMITTER_EN_MASK ((((1U << LINE_SENSOR_HW_NUM_SENSORS) - 1U) << LINE_SENSOR_HW_OFFSET) | (1U << LINE_SENSOR_HW_STRB_CH))
+#define LINE_SENSOR_HW_LED_EN_MASK (((1U << LINE_SENSOR_HW_NUM_SENSORS) - 1U) << LINE_SENSOR_HW_OFFSET)
 
 #ifdef __cplusplus
 extern "C"
@@ -44,13 +45,18 @@ static int line_sensor_hw_init(line_sensor_hw_inst_t *inst)
     if (IS31FL3218_init(&inst->led_hw) != IS31FL3218_OK)
         return LINE_SENSOR_HW_ERROR;
 
+    if (IS31FL3218_enable(&inst->emitter_hw) != IS31FL3218_OK)
+        return LINE_SENSOR_HW_ERROR;
+    if (IS31FL3218_enable(&inst->led_hw) != IS31FL3218_OK)
+        return LINE_SENSOR_HW_ERROR;
+
     for (int i = 0; i < LINE_SENSOR_HW_NUM_SENSORS; i++)
     {
         IS31FL3218_set_channel_pwm(&inst->emitter_hw, i + LINE_SENSOR_HW_OFFSET, 0xFF);
     }
 
     IS31FL3218_set_channel_pwm(&inst->emitter_hw, LINE_SENSOR_HW_STRB_CH, 0xFF);
-    IS31FL3218_set_channels_enable(&inst->emitter_hw, 0U);
+    IS31FL3218_set_channels_enable(&inst->emitter_hw, LINE_SENSOR_HW_EMITTER_EN_MASK);
     if (IS31FL3218_write_data(&inst->emitter_hw) != SPI_ADC_HW_OK)
         return LINE_SENSOR_HW_ERROR;
 
@@ -95,6 +101,11 @@ static inline void line_sensor_hw_set_led_enable(line_sensor_hw_inst_t *inst, in
     IS31FL3218_set_channel_enable(&inst->led_hw, ch, _Enabled);
 }
 
+static inline int line_sensor_hw_set_leds_enable(line_sensor_hw_inst_t *inst, bool _Enabled)
+{
+    return IS31FL3218_write_channels_enable(&inst->led_hw, _Enabled ? LINE_SENSOR_HW_LED_EN_MASK : 0U);
+}
+
 static inline void line_sensor_hw_toggle_led_enable(line_sensor_hw_inst_t *inst, int ch)
 {
     IS31FL3218_toggle_channel_enable(&inst->led_hw, ch);
@@ -112,7 +123,10 @@ static inline int line_sensor_hw_read(line_sensor_hw_inst_t *inst, uint _output[
         return LINE_SENSOR_HW_ERROR;
 
     for (uint i = 0U; i < LINE_SENSOR_HW_NUM_SENSORS; i++)
-        _output[ADC_TO_POS_MAP[i]] = buffer[i * 2U + 1U];
+    {
+        uint ik = i * 2U;
+        _output[ADC_TO_POS_MAP[i]] = (buffer[ik] + buffer[ik + 1U]) / 2U;
+    }
 
     return LINE_SENSOR_HW_OK;
 }

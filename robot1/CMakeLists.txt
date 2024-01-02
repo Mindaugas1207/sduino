@@ -2,17 +2,16 @@ add_executable(line_follower)
 
 include_directories("${SDUINO_PROJECT_PATH}/robot1/Include")
 include_directories("${SDUINO_PROJECT_PATH}/motion")
-include_directories("${SDUINO_PROJECT_PATH}/sensors/sensorx/Include")
 include_directories("${SDUINO_PROJECT_PATH}/sensors")
-include_directories("${SDUINO_PROJECT_PATH}/sensors/hardware/VL53L0X/Include")
+include_directories("${SDUINO_PROJECT_PATH}/VL53L0X/Include")
 include_directories("${SDUINO_PROJECT_PATH}/BMI08x/Include")
-include_directories("${SDUINO_PROJECT_PATH}/sensors/hardware/MMC5603/Include")
 include_directories("${SDUINO_PROJECT_PATH}/math")
 include_directories("${SDUINO_PROJECT_PATH}/interface")
 include_directories("${SDUINO_PROJECT_PATH}/hardware")
 
 #target_compile_definitions(line_follower PUBLIC -DIMU_USE_MAG)
 target_compile_definitions(line_follower PUBLIC -DINTERFACE_DEBUG)
+
 
 pico_generate_pio_header(line_follower ${SDUINO_PROJECT_PATH}/hardware/pio/encoder.pio)
 pico_generate_pio_header(line_follower ${SDUINO_PROJECT_PATH}/hardware/pio/spi_adc.pio)
@@ -22,16 +21,14 @@ target_sources(line_follower PRIVATE
     Source/interface.cpp
     ../BMI08x/Source/bmi08a.c
     ../BMI08x/Source/bmi08g.c
-    ../sensors/hardware/MMC5603/Source/MMC5603.c
-    ../sensors/hardware/VL53L0X/Source/vl53l0x_platform.c
-    ../sensors/hardware/VL53L0X/Source/vl53l0x_platform_log.c
-    ../sensors/hardware/VL53L0X/Source/vl53l0x_api.c
-    ../sensors/hardware/VL53L0X/Source/vl53l0x_api_strings.c
-    ../sensors/hardware/VL53L0X/Source/vl53l0x_api_ranging.c
-    ../sensors/hardware/VL53L0X/Source/vl53l0x_api_core.c
-    ../sensors/hardware/VL53L0X/Source/vl53l0x_api_calibration.c
-    ../sensors/sensorx/Source/sensorx.c
-    ../sensors/sensorx/Source/sensorx_vl53l0x.c
+    ../VL53L0X/Source/vl53l0x_platform.c
+    ../VL53L0X/Source/vl53l0x_platform_log.c
+    ../VL53L0X/Source/vl53l0x_api.c
+    ../VL53L0X/Source/vl53l0x_api_strings.c
+    ../VL53L0X/Source/vl53l0x_api_ranging.c
+    ../VL53L0X/Source/vl53l0x_api_core.c
+    ../VL53L0X/Source/vl53l0x_api_calibration.c
+    ../hardware/sensorx_vl53l0x.c
 )
 
 target_link_libraries(line_follower 

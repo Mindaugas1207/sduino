@@ -16,7 +16,7 @@
 #define SPI_ADC_HW_OK PICO_OK
 #define SPI_ADC_HW_ERROR PICO_ERROR_GENERIC
 
-#define SPI_ADC_BUFFER_SIZE __SPI_ADC_CNV_COUNT + 1
+#define SPI_ADC_BUFFER_SIZE __SPI_ADC_CNV_COUNT
 
 #ifdef __cplusplus
 extern "C"
@@ -64,10 +64,10 @@ static int spi_adc_hw_init(spi_adc_hw_inst_t *inst)
     pio_gpio_init(inst->Pio, inst->Pin_CNV);
     pio_gpio_init(inst->Pio, inst->Pin_RESET);
 
-    gpio_set_dir(inst->Pin_CLK, GPIO_OUT);
-    gpio_set_dir(inst->Pin_DATA, GPIO_IN);
-    gpio_set_dir(inst->Pin_CNV, GPIO_OUT);
-    gpio_set_dir(inst->Pin_RESET, GPIO_OUT);
+    //gpio_set_dir(inst->Pin_CLK, GPIO_OUT);
+    //gpio_set_dir(inst->Pin_DATA, GPIO_IN);
+    //gpio_set_dir(inst->Pin_CNV, GPIO_OUT);
+    //gpio_set_dir(inst->Pin_RESET, GPIO_OUT);
 
     // gpio_put(inst->Pin_CLK, true);
     // gpio_put(inst->Pin_CNV, false);
@@ -82,7 +82,8 @@ static int spi_adc_hw_init(spi_adc_hw_inst_t *inst)
     gpio_set_drive_strength(inst->Pin_CLK, GPIO_DRIVE_STRENGTH_12MA);
     gpio_set_slew_rate(inst->Pin_CNV, GPIO_SLEW_RATE_FAST);
     gpio_set_drive_strength(inst->Pin_CNV, GPIO_DRIVE_STRENGTH_12MA);
-    gpio_pull_up(inst->Pin_DATA);
+    gpio_set_pulls(inst->Pin_DATA, true, false);
+    //gpio_pull_up(inst->Pin_DATA);
     hw_set_bits(&inst->Pio->input_sync_bypass, 1u << inst->Pin_DATA);
 
     pio_sm_init(inst->Pio, inst->Pio_sm_0, prog_offs_sm0, &c_sm0);
@@ -94,12 +95,14 @@ static int spi_adc_hw_init(spi_adc_hw_inst_t *inst)
     channel_config_set_transfer_data_size(&dma_c, DMA_SIZE_16);
     channel_config_set_dreq(&dma_c, pio_get_dreq(inst->Pio, inst->Pio_sm_0, false));
 
-    dma_channel_configure(inst->DMA_ch, &dma_c, inst->DMA_buffer, &inst->Pio->rxf[inst->Pio_sm_0], SPI_ADC_BUFFER_SIZE, true);
+    dma_channel_configure(inst->DMA_ch, &dma_c, inst->DMA_buffer, &inst->Pio->rxf[inst->Pio_sm_0], SPI_ADC_BUFFER_SIZE, false);
 
     // irq_set_exclusive_handler(inst->Pio == pio0 ? PIO0_IRQ_0 : PIO1_IRQ_0, padc_handler);
 
     // pio_set_irq0_source_mask_enabled(inst->Pio, 1u << ((int)pis_interrupt0 + __SPI_ADC_FLAG_IRQ), true);
     // irq_set_enabled(inst->Pio == pio0 ? PIO0_IRQ_0 : PIO1_IRQ_0, true);
+
+    pio_set_sm_mask_enabled(inst->Pio, (1 << inst->Pio_sm_0) | (1 << inst->Pio_sm_1), false);
 
     return SPI_ADC_HW_OK;
 }
@@ -108,7 +111,7 @@ static int spi_adc_hw_enable(spi_adc_hw_inst_t *inst)
 {
     pio_set_sm_mask_enabled(inst->Pio, (1 << inst->Pio_sm_0) | (1 << inst->Pio_sm_1), false);
     pio_restart_sm_mask(inst->Pio, (1 << inst->Pio_sm_0) | (1 << inst->Pio_sm_1));
-    pio_sm_drain_tx_fifo(inst->Pio, inst->Pio_sm_1);
+    //pio_sm_drain_tx_fifo(inst->Pio, inst->Pio_sm_1);
     dma_channel_set_write_addr(inst->DMA_ch, inst->DMA_buffer, true);
     pio_set_sm_mask_enabled(inst->Pio, (1 << inst->Pio_sm_0) | (1 << inst->Pio_sm_1), true);
 
@@ -116,18 +119,17 @@ static int spi_adc_hw_enable(spi_adc_hw_inst_t *inst)
     {
         tight_loop_contents();
     }
-
     
     pio_interrupt_clear(inst->Pio, __SPI_ADC_FLAG_IRQ); // start sm
-    pio_sm_put_blocking(inst->Pio, inst->Pio_sm_1, __SPI_ADC_CNV_COUNT);
+    pio_sm_put_blocking(inst->Pio, inst->Pio_sm_1, __SPI_ADC_CNV_COUNT - 1);
 
     return SPI_ADC_HW_OK;
 }
 
 static int spi_adc_hw_disable(spi_adc_hw_inst_t *inst)
 {
-    pio_set_sm_mask_enabled(inst->Pio, (1 << inst->Pio_sm_0) | (1 << inst->Pio_sm_1), false);
-    dma_channel_abort(inst->DMA_ch);
+    //pio_set_sm_mask_enabled(inst->Pio, (1 << inst->Pio_sm_0) | (1 << inst->Pio_sm_1), false);
+    //dma_channel_abort(inst->DMA_ch);
 
     return SPI_ADC_HW_OK;
 }
@@ -139,21 +141,31 @@ static inline bool spi_adc_hw_is_busy(spi_adc_hw_inst_t *inst)
 
 static inline int spi_adc_hw_read(spi_adc_hw_inst_t *inst, uint16_t result[SPI_ADC_BUFFER_SIZE])
 {
+    
+
+    // printf("read strt\n");
+
     while (spi_adc_hw_is_busy(inst))
     {
-        //printf("dma %d pio %d %d %d\n", dma_channel_is_busy(inst->DMA_ch), pio_interrupt_get(inst->Pio, 0), pio_interrupt_get(inst->Pio, 1), pio_interrupt_get(inst->Pio, 6));
-        tight_loop_contents();
+    //     //printf("dma %d pio %d %d %d\n", dma_channel_is_busy(inst->DMA_ch), pio_interrupt_get(inst->Pio, 0), pio_interrupt_get(inst->Pio, 1), pio_interrupt_get(inst->Pio, 6));
+         tight_loop_contents();
     }
 
-    //printf("read ok\n");
-
-    // GetData
+    //GetData
     memcpy(result, inst->DMA_buffer, SPI_ADC_BUFFER_SIZE * sizeof(uint16_t));
 
     // Restart
     dma_channel_set_write_addr(inst->DMA_ch, inst->DMA_buffer, true);
     pio_interrupt_clear(inst->Pio, __SPI_ADC_FLAG_IRQ); // start sm
-    pio_sm_put_blocking(inst->Pio, inst->Pio_sm_1, __SPI_ADC_CNV_COUNT);
+    pio_sm_put_blocking(inst->Pio, inst->Pio_sm_1, __SPI_ADC_CNV_COUNT - 1);
+
+    // while (spi_adc_hw_is_busy(inst))
+    // {
+    //     //printf("dma %d pio %d %d %d\n", dma_channel_is_busy(inst->DMA_ch), pio_interrupt_get(inst->Pio, 0), pio_interrupt_get(inst->Pio, 1), pio_interrupt_get(inst->Pio, 6));
+    //     tight_loop_contents();
+    // }
+
+    
 
     return SPI_ADC_HW_OK;
 }
