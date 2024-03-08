@@ -1,244 +1,138 @@
 
-function loadValues(){
-	var xh = new XMLHttpRequest();
-	xh.onreadystatechange = function(){
-		if (xh.readyState == 4 && xh.status == 200){
-			var res = JSON.parse(xh.responseText);
-			Object.entries(res).forEach((entry) => {
-				const [id, value] = entry;
-				const wrap = document.getElementById(id);
-				if (wrap !== null) {
-					const range = wrap.querySelector(".range");
-					const bubble = wrap.querySelector(".bubble");
-					if (range !== null || bubble !== null) {
-						range.value = value;
-						setBubble(range, bubble);
-					}
-				}
-				else
-				{
-					const but = document.getElementById(id+":v");
-					if (but !== null)
-					{
-						if (value > 0) {
-							but.style.backgroundColor = "green";
-						}
-						if (value <= 0) {
-							but.style.backgroundColor = "red";
-						}	
-					}
-					else
-					{
-						const butb = document.getElementById(id+":"+"value");
-						if (but !== null) {
-							butb.style.backgroundColor = "green";
-						}
-					}
-				}
-			});
-		}
-	};
-	xh.addEventListener('error', (event) => { alert('Unable to get data!'); });
-	xh.open("GET", "/sduino/data?ALL=0", true);
-	xh.send(null);
-}
-
-function loadCmds(){
-	var xh = new XMLHttpRequest();
-	xh.onreadystatechange = function(){
-		if (xh.readyState == 4 && xh.status == 200){
-			var res = JSON.parse(xh.responseText);
-			Object.entries(res).forEach((entry) => {
-				const [id, value] = entry;
-				const wrap = document.getElementById(id);
-				if (wrap !== null) {
-					const range = wrap.querySelector(".range");
-					const bubble = wrap.querySelector(".bubble");
-					if (range !== null || bubble !== null) {
-						range.value = value;
-						setBubble(range, bubble);
-					}
-				}
-				else
-				{
-					const but = document.getElementById(id+":v");
-					if (but !== null)
-					{
-						if (value > 0) {
-							but.style.backgroundColor = "green";
-						}
-						if (value <= 0) {
-							but.style.backgroundColor = "red";
-						}	
-					}
-					else
-					{
-						const butb = document.getElementById(id+":"+"value");
-						if (but !== null) {
-							butb.style.backgroundColor = "green";
-						}
-					}
-				}
-			});
-			setTimeout(loadCmds, 2800);
-		}
-	};
-	xh.addEventListener('error', (event) => { alert('Unable to get data!'); });
-	xh.open("GET", "/sduino/data?CMDS=0", true);
-	xh.send(null);
-}
-
-function getValue(id){
-	var xh = new XMLHttpRequest();
-	xh.onreadystatechange = function(){
-		if (xh.readyState == 4 && xh.status == 200){
-		var res = JSON.parse(xh.responseText);
-		Object.entries(res).forEach((entry) => {
-			const [id, value] = entry;
-			const wrap = document.getElementById(id);
-			if (wrap !== null) {
-				const range = wrap.querySelector(".range");
-				const bubble = wrap.querySelector(".bubble");
-				if (range !== null || bubble !== null) {
-					range.value = value;
-					setBubble(range, bubble);
-				}
-			}
-			else
-			{
-				const but = document.getElementById(id+":v");
-				if (but !== null)
-				{
-					if (value > 0) {
-						but.style.backgroundColor = "green";
-					}
-					if (value <= 0) {
-						but.style.backgroundColor = "red";
-					}	
-				}
-				else
-				{
-					const butb = document.getElementById(id+":"+"value");
-					if (but !== null) {
-						butb.style.backgroundColor = "green";
-					}
-				}
-			}
-		});
-		}
-	};
-	xh.addEventListener('error', (event) => { alert('Unable to get data!'); });
-	xh.open("GET", "/sduino/data?" + id + "=0", true);
-	xh.send(null);
-}
-
-//document.getElementById("defaultOpen").click();
 var thumbWidth = 20;
 
-function setBubble(range, bubble){
-	var newValue = Number(((range.value - range.min) * (range.clientWidth - thumbWidth) / (range.max - range.min)) - (bubble.clientWidth / 2) + (thumbWidth / 1.6));
-	bubble.innerHTML = range.value;
-	if (bubble.getAttribute('data-defval') === null) { bubble.setAttribute('data-defval', range.value); }
-	var backValue = (range.value-range.min)/(range.max-range.min)*100;
-	range.style.background = 'linear-gradient(to right, Teal 0%, Cyan ' + backValue + '%, LightGray ' + backValue + '%, white 100%)';
-	bubble.style.left = newValue + 'px';
+function setBubble(range, bubble) {
+    var newValue = Number(((range.value - range.min) * (range.clientWidth - thumbWidth) / (range.max - range.min)) - (bubble.clientWidth / 2) + (thumbWidth / 1.6));
+    bubble.innerHTML = range.value;
+    if (bubble.getAttribute('data-defval') === null) { bubble.setAttribute('data-defval', range.value); }
+    var backValue = (range.value - range.min) / (range.max - range.min) * 100;
+    range.style.background = `linear-gradient(to right, Teal 0%, Cyan ${backValue}%, LightGray ${backValue}%, white 100%)`;
+    bubble.style.left = `${newValue}px`;
 }
 
-//dataObj = {};
-//propertyName = id;
-//dataObj[propertyName] = val;
-//sendData(dataObj);
-
-function sendData(data) {
-	const XHR = new XMLHttpRequest();
-	const FD = new FormData();
-	for (const [name, value] of Object.entries(data)) { FD.append(name, value); }
-	XHR.addEventListener('error', (event) => { alert('Unable to send data!'); });
-	XHR.open('POST', '/sduino/data');
-	XHR.send(FD);
+function updateRange(range_wrap, value) {
+    var range = range_wrap.querySelector('.range');
+    var bubble = range_wrap.querySelector('.bubble');
+    range.value = value;
+    setBubble(range, bubble);
 }
 
-function updateVar(id, val) {
-	const XHR = new XMLHttpRequest();
-	XHR.addEventListener('error', (event) => { alert('Unable to send data!'); });
-	XHR.addEventListener('load', (event) => { getValue(id); });
-	XHR.open("POST", "/sduino/data?" + id + "=" + val);
-	XHR.send(null);
+function updateButton(button, value) {
+    button.value = value;
+    button.style.backgroundColor = value > 0 ? 'green' : 'red';
 }
 
-var Socket;
-
-function wsstart() {
-	//Socket = new WebSocket('ws://'+ '192.168.0.10' + ':81/', ['arduino']);
-	Socket = new WebSocket('ws://'+ location.hostname + ':81/', ['arduino']);
-	Socket.onopen = function () {
-		console.log('WebSocket Connected');
-	};
-	Socket.onerror = function (error) {
-		console.log('WebSocket Error ', error);
-	};
-	Socket.onmessage = function (e) {
-		console.log(e.data);
-	};
-	Socket.onclose = function(){
-		console.log('WebSocket connection closed');
-	};
+function parseEntry(entry) {
+    var [id, value] = entry;
+    var entity = document.getElementById(id);
+    if (entity !== null) {
+        if (entity.className === 'range-wrap') updateRange(entity, value);
+        else if (entity.className === 'button') updateButton(entity, value);
+        else console.log(entity.className);
+    }
 }
 
-function onBodyLoad(){
-	const allRanges = document.querySelectorAll(".range-wrap");
-	allRanges.forEach(wrap => {
-		const range = wrap.querySelector(".range");
-		const bubble = wrap.querySelector(".bubble");
-		const btns = wrap.querySelectorAll(".btnpm");
-		
-		range.addEventListener("input", () => {
-			setBubble(range, bubble);
-			updateVar(range.parentNode.id, range.value);
-		});
-		
-		btns.forEach(btn => {
-			btn.addEventListener("click", () => {
-				var newVal = Number(range.value) + Number(btn.innerHTML);
-				range.value = newVal;
-				setBubble(range, bubble);
-				updateVar(range.parentNode.id, range.value);
-			});
-		});
-
-		
-		setBubble(range, bubble);
-	});
-
-	
-	loadValues();
-	wsstart();
-	setTimeout(loadCmds, 1000);
+function getValue(reqId) {
+    var xh = new XMLHttpRequest();
+    xh.onreadystatechange = ()=>{if (xh.readyState === 4 && xh.status === 200) Object.entries(JSON.parse(xh.responseText)).forEach((entry) => parseEntry(entry))};
+    xh.open('GET', `/sduino/data?${reqId}=0`, true);
+    xh.send(null);
 }
 
-function switchTab(evt, TabName) {
-	var i, tabcontent, tablinks;
-	tabcontent = document.getElementsByClassName("tabcontent");
-	for (i = 0; i < tabcontent.length; i++) {
-		tabcontent[i].style.display = "none";
-	}
-	tablinks = document.getElementsByClassName("tablinks");
-	for (i = 0; i < tablinks.length; i++) {
-		tablinks[i].className = tablinks[i].className.replace(" active", "");
-	}
-	tab = document.getElementById(TabName);
-	tab.style.display = "block";
-	const allRanges = tab.querySelectorAll(".range-wrap");
-	allRanges.forEach(wrap => {
-		const range = wrap.querySelector(".range");
-		const bubble = wrap.querySelector(".bubble");
-		setBubble(range, bubble);
-	});
-	evt.currentTarget.className += " active";
+function updateValue(reqId, val) {
+    var xh = new XMLHttpRequest();
+    //XHR.addEventListener('error', () => { alert('Unable to send data!'); });
+    xh.addEventListener('load', () => { getValue(reqId); });
+    xh.open('POST', `/sduino/data?${reqId}=${val}`);
+    xh.send(null);
+}
+
+
+// document.getElementById("defaultOpen").click();
+
+
+// dataObj = {};
+// propertyName = id;
+// dataObj[propertyName] = val;
+// sendData(dataObj);
+
+// function sendData(data) {
+//     const xh = new XMLHttpRequest();
+//     const FD = new FormData();
+//     for (let [name, value] of Object.entries(data)) { FD.append(name, value); }
+//     //XHR.addEventListener('error', (event) => { alert('Unable to send data!'); });
+//     xh.open('POST', '/sduino/data');
+//     xh.send(FD);
+// }
+
+function initButtons() {
+    var allButtons = document.querySelectorAll('.button');
+
+    allButtons.forEach((butt) => {
+        butt.addEventListener('click', () => {
+            updateValue(butt.id, butt.value > 0 ? 0 : 1);
+        });
+    });
+}
+
+function initRanges() {
+    var allRanges = document.querySelectorAll('.range-wrap');
+    allRanges.forEach((wrap) => {
+        var range = wrap.querySelector('.range');
+        var bubble = wrap.querySelector('.bubble');
+        var btns = wrap.querySelectorAll('.btnpm');
+
+        range.addEventListener('input', () => {
+            setBubble(range, bubble);
+            updateValue(range.parentNode.id, range.value);
+        });
+
+        btns.forEach((btn) => {
+            btn.addEventListener('click', () => {
+                var newVal = Number(range.value) + Number(btn.innerHTML);
+                range.value = newVal;
+                setBubble(range, bubble);
+                updateValue(range.parentNode.id, range.value);
+            });
+        });
+    });
+}
+
+function switchTab(TabName) {
+    var tablinks = document.getElementsByClassName('tablinks');
+    var tablink = document.getElementById('LINK_' + TabName);
+    var tabs = document.getElementsByClassName('tabcontent');
+    var tab = document.getElementById('TAB_' + TabName);
+    for (var i = 0; i < tabs.length; i++) tabs[i].style.display = 'none';
+    for (var i = 0; i < tablinks.length; i++) tablinks[i].className = tablinks[i].className.replace(' active', '');
+    tab.style.display = 'block';
+    tablink.className += ' active';
+
+    var allRanges = tab.querySelectorAll('.range-wrap');
+    allRanges.forEach((wrap) => {
+        var range = wrap.querySelector('.range');
+        var bubble = wrap.querySelector('.bubble');
+        setBubble(range, bubble);
+    });
+}
+
+function initTabs() {
+    var tablinks = document.getElementsByClassName('tablinks');
+    for (var i = 0; i < tablinks.length; i++) {
+        var tmp = tablinks[i];
+        tmp.addEventListener('click', () => { switchTab(tmp.value); });
+    }
+}
+
+function onBodyLoad() {
+    initTabs();
+    initButtons();
+    initRanges();
+    getValue('ALL');
+    //getValue('CMDS')
+    //setTimeout(loadCmds, 1000);
 }
 
 function testComms() {
-  updateVar("0", "19.97");
-  getValue("0");
+    updateValue('0', '19.97');
 }
-

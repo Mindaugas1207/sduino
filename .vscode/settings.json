@@ -77,5 +77,6 @@
       "streambuf": "cpp",
       "cinttypes": "cpp",
       "typeinfo": "cpp"
-    }
+    },
+    "editor.maxTokenizationLineLength": 100000
   }

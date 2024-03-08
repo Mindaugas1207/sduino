@@ -4,27 +4,23 @@ body {background-color: #202124;}
 box-sizing: border-box;
 }
 .column {
-float: left;
-padding: 0;
+background-color:Teal;
+height: 30px;
+text-align: center;
+color: white;
+}
+
+.butn {
+height: 100%;
+width: 60px;
 }
 
 .left {
-width: 40%;
-text-align:left;
-background-color:Teal;
-}
-
-.middle {
-width: 20%;
-padding: 11px;
-text-align:center;
-background-color:Teal;
+float: left;
 }
 
 .right {
-width: 40%;
-text-align:right;
-background-color:Teal;
+float: right;
 }
 
 .row:after {
@@ -125,8 +121,5 @@ border: 1px solid Teal;
 border-top: none;
 }
 
-.btnpm {
-width: 60px;
-height: 40px;
-}
+
 
