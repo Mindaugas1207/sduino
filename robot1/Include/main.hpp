@@ -62,6 +62,7 @@ struct LineFollowerSysConfig
     float Wall_Angle;
     uint Wall_time1;
     uint Wall_time2;
+    uint loop_time;
 };
 
 struct LineFollowerConfig
@@ -112,11 +113,11 @@ void EraseConfig(void);
 int SetVariable(int _Enum, float _Value);
 std::tuple<int, float> GetVariable(int _Enum);
 
-constexpr auto ESC_PWM_PIN = 29U; //pwm5 A
-constexpr auto MOTOR_B_ENCODER_A_PIN = 23U; //pwm0 b
-constexpr auto MOTOR_B_ENCODER_B_PIN = 24U; //pwm1 b
-constexpr auto MOTOR_A_ENCODER_A_PIN = 1U; // reik pakeist i 23 pwm3 b
-constexpr auto MOTOR_A_ENCODER_B_PIN = 2U; //pwm4 b reik pakeist i 24 pwm4 a
+constexpr auto ESC_PWM_PIN = 29U;
+constexpr auto MOTOR_B_ENCODER_A_PIN = 23U;
+constexpr auto MOTOR_B_ENCODER_B_PIN = 24U;
+constexpr auto MOTOR_A_ENCODER_A_PIN = 1U;
+constexpr auto MOTOR_A_ENCODER_B_PIN = 2U;
 constexpr auto NVM_CONFG_LOCK_CODE = 0xACE9FBD117E3B907;
 
 inline NVM_s NVM;

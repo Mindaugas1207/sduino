@@ -96,6 +96,8 @@ class LineSensor
 
     std::array<IRSensor<T>, _SensorCount> Sensors;
 
+    int lpos = 0;
+
     //std::array<uint, _SensorCount> RawData;
 
     bool Enabled;
@@ -123,6 +125,8 @@ public:
 
     void SetDisplayAnalog(bool value) { DisplayAnalog = value; }
     bool GetDisplayAnalog(void) { return DisplayAnalog; }
+
+    void SetLpos(int lps) {lpos = lps;}
 
     int Init(const line_sensor_hw_inst_t& hw)
     {
@@ -188,7 +192,7 @@ public:
         for(uint i = 0; i < _SensorCount; i++)
             Sensors[i].Compute(RawData[i]);
 
-        UpdateLeds(time);
+        //UpdateLeds(time);
     }
 
     void UpdateLeds(const uint64_t& time = TIME_U64())
@@ -209,7 +213,7 @@ public:
             {
                 for(uint i = 0; i < _SensorCount; i++)
                 {
-                    line_sensor_hw_set_led_power(&LineSensor_hw, i + LINE_SENSOR_HW_OFFSET, 0);
+                    line_sensor_hw_set_led_power(&LineSensor_hw, i + LINE_SENSOR_HW_OFFSET, 0U);
                     line_sensor_hw_set_led_enable(&LineSensor_hw, i + LINE_SENSOR_HW_OFFSET, true);
                 }
 
@@ -218,7 +222,8 @@ public:
                 line_sensor_hw_set_led_enable(&LineSensor_hw, LINE_SENSOR_HW_LEFT_CH, true);
                 line_sensor_hw_set_led_enable(&LineSensor_hw, LINE_SENSOR_HW_RIGHT_CH, true);
             }
-            
+
+            //line_sensor_hw_set_led_power(&LineSensor_hw, lpos + LINE_SENSOR_HW_OFFSET, 125U);
 
             line_sensor_hw_led_update(&LineSensor_hw);
         }

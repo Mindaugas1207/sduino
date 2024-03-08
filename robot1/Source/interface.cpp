@@ -46,6 +46,7 @@ enum InterfaceVariables{
     VAR_WALL_TIME1                    = 0X0117,
     VAR_WALL_TIME2                    = 0X0118,
     VAR_DISTANCE                      = 0X0119,
+    VAR_LOOP_TIME                      = 0X0120,
     /*  IMU variables                 = 0x0200,*/
     /*  Line variables                = 0x0220,*/
     VAR_LINE_EMITTER_POWER            = 0x0220,
@@ -127,6 +128,7 @@ std::tuple<int, float> GetVariable(int _Enum)
     case VAR_WALL_TIME1:                    return {INTERFACE_GET_OK, LFSYS.Config.Wall_time1};
     case VAR_WALL_TIME2:                    return {INTERFACE_GET_OK, LFSYS.Config.Wall_time2};
     case VAR_DISTANCE:                      return {INTERFACE_GET_OK, DistanceSensor0.GetDistance()};
+    case VAR_LOOP_TIME:                     return {INTERFACE_GET_OK, LFSYS.Config.loop_time};
     /*Driver variables                      */
     /*Line variables                        */
     case CMD_LINE_TOGGLE_DISPLAY:           return {INTERFACE_GET_OK, LineSensor0.GetDisplayAnalog()};
@@ -183,6 +185,7 @@ int SetVariable(int _Enum, float _Value)
     case VAR_WALL_TIME1:                        LFSYS.Config.Wall_time1 = _Value;                                   return INTERFACE_SET_OK;
     case VAR_WALL_TIME2:                        LFSYS.Config.Wall_time2 = _Value;                                   return INTERFACE_SET_OK;
     case VAR_DISTANCE:                                                                                              return INTERFACE_SET_OK;
+    case VAR_LOOP_TIME:                         LFSYS.Config.loop_time = _Value;                                    return INTERFACE_SET_OK;
     /*Driver variables                                                                                                                           */
     /*Line variables                                                                                                                             */
     case CMD_LINE_TOGGLE_DISPLAY:               LineSensor0.SetDisplayAnalog(_Value);                               return INTERFACE_SET_OK;
