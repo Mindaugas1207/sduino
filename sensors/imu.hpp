@@ -18,24 +18,24 @@ class IMU
     uint32_t CalibrationTime;
 
     struct {
-        vmath::vect_t<T> Raw;
-        vmath::vect_t<T> Value;
-        vmath::vect_t<T> Bias;
-        vmath::vect_t<T> Accum;
+        vmath::vector_s<3> Raw;
+        vmath::vector_s<3> Value;
+        vmath::vector_s<3> Bias;
+        vmath::vector_s<3> Accum;
     } Accelerometer;
 
     struct {
-        vmath::vect_t<T> Raw;
-        vmath::vect_t<T> Value;
-        vmath::vect_t<T> Bias;
-        vmath::vect_t<T> Accum;
+        vmath::vector_s<3> Raw;
+        vmath::vector_s<3> Value;
+        vmath::vector_s<3> Bias;
+        vmath::vector_s<3> Accum;
     } Gyroscope;
 
-    vmath::euler_t<T> Orientation;
+    vmath::euler_t Orientation;
 
     int AccumulatorSamples;
 
-    vmath::MadgwickFilter<T> Filter;
+    vmath::MadgwickFilter Filter;
 
     bool Enabled;
     bool Calibrated;
@@ -58,7 +58,7 @@ class IMU
         
         auto quat = Filter.Compute(Gyroscope.Value, Accelerometer.Value, deltaT);
         
-        Orientation = quat.EulerAngles();
+        Orientation.FromQuaternion(quat);
     }
 
     void RunCalibration(const uint64_t& time)
@@ -74,8 +74,8 @@ class IMU
             Gyroscope.Bias     = Gyroscope.Accum     / AccumulatorSamples;
             Accelerometer.Bias = Accelerometer.Accum / AccumulatorSamples;
 
-            if(Accelerometer.Bias.Z > (T)G_EARTH / 3) Accelerometer.Bias.Z -= (T)G_EARTH;  // Remove gravity from the z-axis accelerometer bias calculation
-            else Accelerometer.Bias.Z += (T)G_EARTH;
+            if(Accelerometer.Bias[2] > (T)G_EARTH / 3) Accelerometer.Bias[2] -= (T)G_EARTH;  // Remove gravity from the z-axis accelerometer bias calculation
+            else Accelerometer.Bias[2] += (T)G_EARTH;
 
             Calibrated = true;
             CalibrationStarted = false;
@@ -90,8 +90,8 @@ public:
     {
         uint32_t CalibrationTime;
         T FilterBeta;
-        vmath::vect_t<T> GyroBias;
-        vmath::vect_t<T> AccelBias;
+        vmath::vector_s<3> GyroBias;
+        vmath::vector_s<3> AccelBias;
         bool Calibrated;
     };
 
