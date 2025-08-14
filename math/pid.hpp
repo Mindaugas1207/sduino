@@ -6,110 +6,76 @@
 #include "vmath.hpp"
 
 template<typename T>
-struct PID
+class PID
 {
-    float SetPoint;
-    float Gain;
-    float IntegralTime;
-    float IntegralLimit;
-    float IntegralRateLimit;
-    float IntegralAntiWindup;
-    float DerivativeTime;
-    float DerivativeCutoff;
-    float OutputLimit;
-    float DeadZone;
+    T Gain;
+    T IntegralTime;
+    T DerivativeTime;
+    T IntegralTimeReciprocal;
     
-    float Output;
-    float Error;
-    float LastInput;
-    float LastError;
-    float Integral;
-    float IntegralTimeReciprocal;
-    float Derivative;
-    float DeltaTime;
+    T InputFilter;
+    T IntegralLimit;
+    T DerivativeCutoff;
+    T OutputMin;
+    T OutputMax;
 
-    uint64_t TimeStamp;
+    T LastInput;
+    T InputDeltaAvg;
+    T Integral;
+    T Derivative;
+public:
+    void reset(void)
+    {
+        LastInput = 0;
+        InputDeltaAvg = 0;
+        Integral = 0;
+        Derivative = 0;
+    }
 
-    // void reset(void)
-    // {
-    //     Output = 0.0f;
-    //     Error = 0.0f;
-    //     LastError = 0.0f;
-    //     LastInput = 0.0f;
-    //     Integral = 0.0f;
-    //     Derivative = 0.0f;
-    // }
+    void setGain(T value) { Gain = value; }
+    T getGain(void) { return Gain; }
+    void setInputFilter(T value) { InputFilter = value; }
+    T getInputFilter(void) { return InputFilter; }
+    void setIntegralTime(T value)
+    {
+        IntegralTime = value;
+        IntegralTimeReciprocal = value != (T)0.0 ? (T)1.0 / value : 0;
+        Integral *= value;
+    }
+    T getIntegralTime(void) { return IntegralTime; }
+    void setDerivativeTime(T value) { DerivativeTime = value; }
+    T getDerivativeTime(void) { return DerivativeTime; }
+    void setIntegralLimit(T value) { IntegralLimit = value; }
+    T getIntegralLimit(void) { return IntegralLimit; }
+    void setDerivativeCutoff(T value) { DerivativeCutoff = value; }
+    T getDerivativeCutoff(void) { return DerivativeCutoff; }
+    void setOutputMin(T value) { OutputMin = value; }
+    T getOutputMin(void) { return OutputMin; }
+    void setOutputMax(T value) { OutputMax = value; }
+    T getOutputMax(void) { return OutputMax; }
 
-    // void setSetPoint(float _SetPoint) { SetPoint = _SetPoint; }
-    // float getSetPoint(void) { return SetPoint; }
-    // void setGain(float _Gain) { Gain = _Gain; }
-    // float getGain(void) { return Gain; }
-    // void setIntegralTime(float _IntegralTime) {
-    //     IntegralTime = _IntegralTime;
-    //     IntegralTimeReciprocal = _IntegralTime != 0.0f ? 1.0f / _IntegralTime : 0.0f;
-    //     Integral *= _IntegralTime;
-    // }
-    // float getIntegralTime(void) { return IntegralTime; }
-    // void setIntegralLimit(float _IntegralLimit) { IntegralLimit = _IntegralLimit; }
-    // float getIntegralLimit(void) { return IntegralLimit; }
-    // void setIntegralRateLimit(float _IntegralRateLimit) { IntegralRateLimit = _IntegralRateLimit; }
-    // float getIntegralRateLimit(void) { return IntegralRateLimit; }
-    // void setIntegralAntiWindup(float _IntegralAntiWindup) { IntegralAntiWindup = _IntegralAntiWindup; }
-    // float getIntegralAntiWindup(void) { return IntegralAntiWindup; }
-    // void setDerivativeTime(float _DerivativeTime) { DerivativeTime = _DerivativeTime; }
-    // float getDerivativeTime(void) { return DerivativeTime; }
-    // void setDerivativeCutoff(float _DerivativeCutoff) { DerivativeCutoff = _DerivativeCutoff; }
-    // float getDerivativeCutoff(void) { return DerivativeCutoff; }
-    // void setOutputLimit(float _OutputLimit) { OutputLimit = _OutputLimit; }
-    // float getOutputLimit(void) { return OutputLimit; }
-    // void setDeadZone(float _DeadZone) { DeadZone = _DeadZone; }
-    // float getDeadZone(void) { return DeadZone; }
-    
-    // float getError(void) { return Error; }
-    // float getIntegral(void) { return Integral; }
-    // float getDerivative(void) { return Derivative; }
-    // float getDeltaTime(void) { return DeltaTime; }
-    // float getOutput(void) { return Output; }
+    T Compute(const T setpoint, const T input, const T dt)
+    {
+        T error = setpoint - input;
+        T dInput = input - LastInput;
+        LastInput = input;
 
-    // float compute(float _Input, float dT)
-    // {
-    //     DeltaTime = (T)(time - TimeStamp) / 1000000;
-    //     TimeStamp = time;
+        InputDeltaAvg = dInput * InputFilter + InputDeltaAvg * ((T)1.0 - InputFilter);
 
-    //     if (DeadZone != 0.0f && SetPoint < DeadZone && SetPoint > -DeadZone && _Input < DeadZone && _Input > -DeadZone)
-    //     {
-    //         Error = 0.0f;
-    //         Integral = 0.0f;
-    //         Derivative = 0.0f;
-    //         Output = 0.0f;
-    //     }
-    //     else
-    //     {
-    //         Error = SetPoint - _Input;
-    //         //Integral
-    //         float tint = IntegralTime != 0.0f ? Error * IntegralTimeReciprocal * DeltaTime : 0.0f;
-    //         Integral = std::clamp(Integral + tint, -IntegralLimit, IntegralLimit);// + std::clamp(Error, -IntegralRateLimit, IntegralRateLimit)
+        T dIntegral = error * IntegralTimeReciprocal * dt;
+        Integral = std::clamp(Integral + dIntegral, -IntegralLimit, IntegralLimit);
 
-    //         //Derivative
-    //         float dint = DerivativeTime != 0.0f ? DerivativeCutoff * (_Input - LastInput) * DerivativeTime / DeltaTime : 0.0f;
-    //         Derivative = (1.0f - DerivativeCutoff) * Derivative + dint; //Derivative on measurement, with moving average filter
-    //             // printf("int: %.6f, der: %.6f\n",Integral,Derivative
-    //             // );
-    //             // sleep_ms(200);
+        //Derivative
+        T dDerivative = DerivativeCutoff * InputDeltaAvg * DerivativeTime / dt;
+        Derivative = ((T)1.0 - DerivativeCutoff) * Derivative + dDerivative; //Derivative on measurement, with moving average filter
 
-    //         //PID
-    //         Output =  Error;
-    //         Output += Derivative;
-    //         Output += Integral;
-    //         Output *= Gain;
-    //         //Output limit
-    //         Output = std::clamp(Output, -OutputLimit, OutputLimit);
-    //     }
-        
-    //     LastError = Error;
-    //     LastInput = _Input;
-    //     return Output;
-    // }
+        T output = error;
+        output += Derivative;
+        output += Integral;
+        output *= Gain;
+        return std::clamp(output, OutputMin, OutputMax);
+    }
+
 };
 
 #endif

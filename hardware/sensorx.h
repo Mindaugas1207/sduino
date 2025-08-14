@@ -9,15 +9,16 @@
 #include "stdlib.h"
 #include "vl53l0x_api.h"
 #include "port.h"
+
+#define SENSORX_ERROR -1
+#define SENSORX_OK 0
+
 #ifndef INCLUDE_SENSORX_H_
 #define INCLUDE_SENSORX_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#define SENSORX_ERROR -1
-#define SENSORX_OK 0
 
 int SENSORX_VL53L0X_Init(VL53L0X_Dev_t *sensor);
 int SENSORX_VL53L0X_PerformSingleMeasurement(VL53L0X_Dev_t *device);

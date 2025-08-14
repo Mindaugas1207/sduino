@@ -21,6 +21,22 @@
 #define INTERFACE_SET_NOVAL 1
 #define INTERFACE_SET_EOF 2
 
+struct SmartControl
+{
+    const int control_type;
+    const char* min;
+    const char* max;
+    const char* step;
+};
+
+struct SmartVariable
+{
+    const char* name;
+    const std::function<float(void)> Get;
+    const std::function<void(float)> Set;
+    const SmartControl* control;
+};
+
 class Interface_s
 {
     char ReceiveBuffer[INTERFACE_RECEIVE_BUFFER_LENGTH];

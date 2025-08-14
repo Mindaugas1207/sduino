@@ -1,9 +1,7 @@
 
-#define FILE_SUCCESS (0)
-#define FILE_ERROR_PATH (-1)
-#define FILE_ERROR_EXISTS (-2)
-#define FILE_ERROR_NOT_FOUND (-2)
-#define FILE_ERROR_FAULT (-3)
+#include <sduino.h>
+
+File wfile;
 
 bool initFileSystem(void)
 {
@@ -53,18 +51,18 @@ String getFileList(const String &path)
   if(root.isDirectory())
   {
       File file = root.openNextFile();
-      while(file)
+      do
       {
-          if (output != "[")
-            output += ',';
           output += "{\"type\":\"";
           output += (file.isDirectory()) ? "dir" : "file";
           output += "\",\"name\":\"";
           output += String(file.path()).substring(1);
-          output += "\"}";
+          output += "\"},";
           file = root.openNextFile();
-      }
+      } while (file);
   }
+  if (output != "[")
+    output.pop_back();
   output += "]";
 
   return output;
@@ -78,7 +76,7 @@ int createFile(const String &path)
   if (file_exists(path))
     return FILE_ERROR_EXISTS;
 
-  File file = FILESYSTEM.open(path, "w");
+  File file = FILESYSTEM.open(path, FILE_WRITE);
   if (file)
   {
     file.close();
@@ -105,11 +103,11 @@ File getFile(const String &path)
   File file;
   if (file_exists(path)
   {
-    file = FILESYSTEM.open(path, "r");
+    file = FILESYSTEM.open(path, FILE_READ);
   }
   else if (file_exists(path + ".gz")
   {
-    file = FILESYSTEM.open(path + ".gz", "r");
+    file = FILESYSTEM.open(path + ".gz", FILE_READ);
   }
 
   if(!file) file.close();
@@ -120,7 +118,7 @@ File getFile(const String &path)
 bool file_exists(const String &path)
 {
   bool yes = false;
-  File file = FILESYSTEM.open(path, "r");
+  File file = FILESYSTEM.open(path, FILE_READ);
 
   if(file)
   {
@@ -129,4 +127,37 @@ bool file_exists(const String &path)
   }
 
   return yes;
+}
+
+int fileWriteBegin(const String &path)
+{
+  if (path == "/")
+    return FILE_ERROR_PATH;
+
+  if (wfile)
+    return FILE_ERROR_PATH;
+
+  wfile = FILESYSTEM.open(path, FILE_WRITE);
+
+  if (!wfile)
+    return FILE_ERROR_FAULT;
+
+  return FILE_SUCCESS;
+}
+
+int fileWrite(const uint8_t &buffer, const int size)
+{
+  if (!wfile)
+    return FILE_ERROR_FAULT;
+
+  if (wfile.write(buffer, size) != size)
+    return FILE_ERROR_FAULT;
+
+  return FILE_SUCCESS;
+}
+
+void fileWriteEnd()
+{
+  if (wfile)
+    wfile.close();
 }

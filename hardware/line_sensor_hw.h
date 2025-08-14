@@ -13,6 +13,7 @@
 #define LINE_SENSOR_HW_ERROR PICO_ERROR_GENERIC
 
 #define LINE_SENSOR_HW_NUM_SENSORS (15U)
+#define LINE_SENSOR_HW_NUM_POS_LEDS (LINE_SENSOR_HW_NUM_SENSORS + 2)
 #define LINE_SENSOR_HW_OFFSET (1U)
 #define LINE_SENSOR_HW_STRB_CH (17U)
 #define LINE_SENSOR_HW_STATUS_CH (17U)
@@ -20,7 +21,10 @@
 #define LINE_SENSOR_HW_RIGHT_CH (0U)
 
 #define LINE_SENSOR_HW_EMITTER_EN_MASK ((((1U << LINE_SENSOR_HW_NUM_SENSORS) - 1U) << LINE_SENSOR_HW_OFFSET) | (1U << LINE_SENSOR_HW_STRB_CH))
-#define LINE_SENSOR_HW_LED_EN_MASK (((1U << LINE_SENSOR_HW_NUM_SENSORS) - 1U) << LINE_SENSOR_HW_OFFSET)
+#define LINE_SENSOR_HW_LED_EN_MASK (((1U << LINE_SENSOR_HW_NUM_POS_LEDS) - 1U) | (1U << LINE_SENSOR_HW_STATUS_CH))
+
+#define LINE_SENSOR_HW_LED_PWM_MAX IS31FL3218_PWM_MAX
+#define LINE_SENSOR_HW_LED_PWM_MIN IS31FL3218_PWM_MIN
 
 #ifdef __cplusplus
 extern "C"
@@ -65,6 +69,8 @@ static int line_sensor_hw_init(line_sensor_hw_inst_t *inst)
 
 static int line_sensor_hw_enable(line_sensor_hw_inst_t *inst)
 {
+    if (IS31FL3218_write_channels_enable(&inst->led_hw, LINE_SENSOR_HW_LED_EN_MASK) != SPI_ADC_HW_OK)
+        return LINE_SENSOR_HW_ERROR;
     if (IS31FL3218_write_channels_enable(&inst->emitter_hw, LINE_SENSOR_HW_EMITTER_EN_MASK) != SPI_ADC_HW_OK)
         return LINE_SENSOR_HW_ERROR;
     if (spi_adc_hw_enable(&inst->spi_adc_hw) != SPI_ADC_HW_OK)

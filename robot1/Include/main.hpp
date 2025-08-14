@@ -55,13 +55,10 @@ struct LineFollowerSysConfig
     float Kp;
     float Kd;
     float Max_Speed;
-    float Ramp_Speed;
-    float Ramp_SpeedDown;
-    uint Wall_Th;
-    float Wall_Speed;
-    float Wall_Angle;
-    uint Wall_time1;
-    uint Wall_time2;
+    float Turn_Speed;
+    float Turn_Angle;
+    float Turn_Threshold;
+    float Turn_Ratio;
     uint loop_time;
 };
 
@@ -71,7 +68,7 @@ struct LineFollowerConfig
     Encoder<double>::Config EncoderA, EncoderB;
     ESC::Config ESC0;
     IMU<double>::Config IMU0;
-    LineSensor<double>::Config LineSensor0;
+    LineSensor<float>::Config LineSensor0;
     LineFollowerSysConfig LFCFG;
     //-----------------------------------//
     uint64_t LockCode;
@@ -89,8 +86,12 @@ struct LineFollowerSys
     bool NVM_Load_OK;
     bool NVM_ReLoad_OK;
     bool NVM_Save_OK;
-    bool Plyta_doing;
-    bool Plyta_done;
+    bool LINE_ANALOG;
+
+    double SpeedL;
+    double SpeedR;
+    double SpeedV;
+    double SpeedW;
 
     LineFollowerSysConfig Config;
 };
@@ -118,7 +119,7 @@ constexpr auto MOTOR_B_ENCODER_A_PIN = 23U;
 constexpr auto MOTOR_B_ENCODER_B_PIN = 24U;
 constexpr auto MOTOR_A_ENCODER_A_PIN = 1U;
 constexpr auto MOTOR_A_ENCODER_B_PIN = 2U;
-constexpr auto NVM_CONFG_LOCK_CODE = 0xACE9FBD117E3B907;
+constexpr auto NVM_CONFG_LOCK_CODE = 0xACE9FBD132E3B907;
 
 inline NVM_s NVM;
 inline Interface_s Interface;
@@ -129,10 +130,13 @@ inline MotorDriver MotorDriverA, MotorDriverB;
 inline Encoder<double> EncoderA, EncoderB;
 inline ESC ESC0;
 inline IMU<double> IMU0;
-inline LineSensor<double> LineSensor0;
+inline LineSensor<float> LineSensor0;
 inline DistanceSensor DistanceSensor0;
 
 inline LineFollowerConfig Config0;
 inline LineFollowerSys LFSYS;
+inline PID<float> PID_Main;
+inline PID<float> PID_MotorA;
+inline PID<float> PID_MotorB;
 
 #endif

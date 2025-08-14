@@ -24,6 +24,11 @@
 	<button class="button" id = "3" style="width: 160px; height: 40px;">CALIBRATE LINE</button>
 	<button class="button" id = "4" style="width: 160px; height: 40px;">CALIBRATE IMU</button>
 	<button class="button" id = "224" style="width: 160px; height: 40px;">Analog</button>
+
+	<div class="display_value" id="500">VALUE</div>
+	<div class="display_value" id="501">VALUE</div>
+	<div class="display_value" id="502">VALUE</div>
+	<div class="display_value" id="503">VALUE</div>
 	</p>
 </div>
 <div class="tab">
@@ -67,51 +72,30 @@
 	</div>
 	<div class="range-wrap" id="112">
 		<div class="column"><button class="butn left">-0.1</button><button class="butn left">-0.01</button><button class="butn left">-0.001</button>
-		RAMP SPEED
+		TURN SPEED
 		<button class="butn right">+0.001</button><button class="butn right">+0.01</button><button class="butn right">+0.1</button></div>
 		<input type="range" class="range" min="-1" max="1" value="0" step="0.001">
 		<output class="bubble"></output>
 	</div>
 	<div class="range-wrap" id="113">
 		<div class="column"><button class="butn left">-0.1</button><button class="butn left">-0.01</button><button class="butn left">-0.001</button>
-		RAMP SPEED DOWN
+		TURN ANGLE
 		<button class="butn right">+0.001</button><button class="butn right">+0.01</button><button class="butn right">+0.1</button></div>
 		<input type="range" class="range" min="-1" max="1" value="0" step="0.001">
 		<output class="bubble"></output>
 	</div>
 	<div class="range-wrap" id="114">
-		<div class="column"><button class="butn left">-0.1</button><button class="butn left">-0.01</button><button class="butn left">-0.001</button>
-		WALL SPEED
-		<button class="butn right">+0.001</button><button class="butn right">+0.01</button><button class="butn right">+0.1</button></div>
-		<input type="range" class="range" min="-1" max="1" value="0" step="0.001">
+		<div class="column"><button class="butn left">-1.0</button><button class="butn left">-0.5</button>
+		TURN THRESHOLD
+		<button class="butn right">+0.5</button><button class="butn right">+1.0</button></div>
+		<input type="range" class="range" min="0" max="15" value="0" step="0.5">
 		<output class="bubble"></output>
 	</div>
 	<div class="range-wrap" id="115">
 		<div class="column"><button class="butn left">-0.1</button><button class="butn left">-0.01</button><button class="butn left">-0.001</button>
-		WALL ANGLE
+		TURN RATIO
 		<button class="butn right">+0.001</button><button class="butn right">+0.01</button><button class="butn right">+0.1</button></div>
 		<input type="range" class="range" min="-1" max="1" value="0" step="0.001">
-		<output class="bubble"></output>
-	</div>
-	<div class="range-wrap" id="116">
-		<div class="column"><button class="butn left">-100</button><button class="butn left">-10</button><button class="butn left">-1</button>
-		WALL TH
-		<button class="butn right">+1</button><button class="butn right">+10</button><button class="butn right">+100</button></div>
-		<input type="range" class="range" min="0" max="10000" value="0" step="1">
-		<output class="bubble"></output>
-	</div>
-	<div class="range-wrap" id="117">
-		<div class="column"><button class="butn left">-100</button><button class="butn left">-10</button><button class="butn left">-1</button>
-		WALL T1
-		<button class="butn right">+1</button><button class="butn right">+10</button><button class="butn right">+100</button></div>
-		<input type="range" class="range" min="0" max="10000" value="0" step="1">
-		<output class="bubble"></output>
-	</div>
-	<div class="range-wrap" id="118">
-		<div class="column"><button class="butn left">-100</button><button class="butn left">-10</button><button class="butn left">-1</button>
-		WALL T2
-		<button class="butn right">+1</button><button class="butn right">+10</button><button class="butn right">+100</button></div>
-		<input type="range" class="range" min="0" max="10000" value="0" step="1">
 		<output class="bubble"></output>
 	</div>
 	<div class="range-wrap" id="119">

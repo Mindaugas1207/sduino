@@ -2,6 +2,8 @@
 #ifndef INC_IMU_HPP_
 #define INC_IMU_HPP_
 
+#define IMU_USE_DOUBLE
+
 #include "imu_hw.h"
 #include "vmath.hpp"
 #include "time_hw.h"
@@ -31,7 +33,8 @@ class IMU
         vmath::vect_t<T> Accum;
     } Gyroscope;
 
-    vmath::euler_t<T> Orientation;
+    vmath::vect_t<T> PreviousAngles;
+    vmath::vect_t<T> Orientation;
 
     int AccumulatorSamples;
 
@@ -57,8 +60,14 @@ class IMU
         Accelerometer.Value = Accelerometer.Raw - Accelerometer.Bias;
         
         auto quat = Filter.Compute(Gyroscope.Value, Accelerometer.Value, deltaT);
+
+        //Orientation = quat.EulerAngles();
+
+        auto angles = quat.EulerAngles();
+
+        Orientation += angles.AngleDifferenceFrom(PreviousAngles);
         
-        Orientation = quat.EulerAngles();
+        PreviousAngles = angles;
     }
 
     void RunCalibration(const uint64_t& time)
@@ -74,8 +83,8 @@ class IMU
             Gyroscope.Bias     = Gyroscope.Accum     / AccumulatorSamples;
             Accelerometer.Bias = Accelerometer.Accum / AccumulatorSamples;
 
-            if(Accelerometer.Bias.Z > (T)G_EARTH / 3) Accelerometer.Bias.Z -= (T)G_EARTH;  // Remove gravity from the z-axis accelerometer bias calculation
-            else Accelerometer.Bias.Z += (T)G_EARTH;
+            if(Accelerometer.Bias.Z > (T)IMU_HW_G_EARTH / 3) Accelerometer.Bias.Z -= (T)IMU_HW_G_EARTH;  // Remove gravity from the z-axis accelerometer bias calculation
+            else Accelerometer.Bias.Z += (T)IMU_HW_G_EARTH;
 
             Calibrated = true;
             CalibrationStarted = false;
@@ -101,6 +110,7 @@ public:
         if (imu_hw_init(&IMU_hw) != BMI08X_OK) return IMU_ERROR;
 
         Filter.Init();
+        PreviousAngles = {0,0,0};
 
         Stop();
 
@@ -115,8 +125,11 @@ public:
 
         return IMU_OK;
     }
-
+    
     auto GetOrientation(void) { return Orientation; }
+    auto GetRawOrientation(void) { return PreviousAngles; }
+    auto GetRawAccel(void) { return Accelerometer.Raw; }
+    auto GetRawGyro(void) { return Gyroscope.Raw; }
     bool IsCalibrated(void)   { return Calibrated;  }
 
     int Start(const uint64_t& time = TIME_U64())

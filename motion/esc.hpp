@@ -76,6 +76,8 @@ public:
 
     int Update(const uint64_t& time = TIME_U64())
     {
+        //printf("ESC> P:% .2f, SP:% .2f, max:% .2f, min:% .2f, s:% .2f, E:%d, R:%d, T:%lu, PRD:%lu\n", Power, Setpoint, Max, Min, StartingPower, Enabled, RampUp, time, RampUpPeriod);
+
         if (Enabled)
         {
             float _Setpoint = 0.0f;
@@ -107,6 +109,10 @@ public:
             }
 
             return RampUp ? ESC_RAMP : ESC_FINAL;
+        }
+        else
+        {
+            esc_hw_set_pulse(&Esc_hw, Min * Esc_hw.Period);
         }
 
         return ESC_OK;

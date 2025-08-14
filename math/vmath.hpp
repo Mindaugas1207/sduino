@@ -39,7 +39,13 @@ namespace vmath
         return x - (T)M_PI;
     }
 
-    template <typename T = double> inline T  UnwrapAngle(T previous_angle, T new_angle) {
+    template <typename T = double> inline T AngleDifference(T from, T to) {
+        T d = to - from;
+        d = d > (T)M_PI ? d - (T)(2 * M_PI) : (d < (T)(-M_PI) ? d + (T)(2 * M_PI) : d);
+        return d;
+    }
+
+    template <typename T = double> inline T UnwrapAngle(T previous_angle, T new_angle) {
         T d = new_angle - previous_angle;
         d = d > (T)M_PI ? d - (T)(2 * M_PI) : (d < (T)(-M_PI) ? d + (T)(2 * M_PI) : d);
         return previous_angle + d;
@@ -55,6 +61,14 @@ namespace vmath
     struct vect_t
     {
         T X, Y, Z;
+
+        T& Roll()  { return this->X; }
+        T& Pitch() { return this->Y; }
+        T& Yaw()   { return this->Z; }
+
+        void Roll (const T& val) { this->X = val; }
+        void Pitch(const T& val) { this->Y = val; }
+        void Yaw  (const T& val) { this->Z = val; }
 
         vect_t& operator=  (const vect_t& rhs) { this->X  = rhs.X; this->Y  = rhs.Y; this->Z  = rhs.Z; return *this; }
         vect_t& operator+= (const vect_t& rhs) { this->X += rhs.X; this->Y += rhs.Y; this->Z += rhs.Z; return *this; }
@@ -83,7 +97,7 @@ namespace vmath
             return {
                 lhs.Y * rhs.Z - lhs.Z * rhs.Y,
                 lhs.Z * rhs.X - lhs.X * rhs.Z,
-                lhs.X * rhs.Y - lhs.Y * rhs.X,
+                lhs.X * rhs.Y - lhs.Y * rhs.X
             };
         }
 
@@ -108,18 +122,15 @@ namespace vmath
             this->Z = this->X * _Rotation[2][0] + this->Y * _Rotation[2][1] + this->Z * _Rotation[2][2];
             return *this *= (T)2.0;
         }
-    };
 
-    template <typename T = double>
-    struct euler_t : vect_t<T>
-    {
-        T& Roll()  { return this->X; }
-        T& Pitch() { return this->Y; }
-        T& Yaw()   { return this->Z; }
-
-        void Roll (const T& val) { this->X = val; }
-        void Pitch(const T& val) { this->Y = val; }
-        void Yaw  (const T& val) { this->Z = val; }
+        vect_t<T> AngleDifferenceFrom(const vect_t& from)
+        {
+            return {
+                AngleDifference(from.X, this->X),
+                AngleDifference(from.Y, this->Y),
+                AngleDifference(from.Z, this->Z)
+            };
+        }
     };
 
     // struct matrix_s
@@ -212,22 +223,22 @@ namespace vmath
             zz = this->Z * this->Z;
             zw = this->Z * this->W;
             
-            _Matrix[0][0] = ((T)0.5 -  yy - zz);
+            _Matrix[0][0] = ((T)0.5 -  yy - zz);//
             _Matrix[0][1] =           (xy - zw);
             _Matrix[0][2] =           (xz + yw);
 
-            _Matrix[1][0] =           (xy + zw);
+            _Matrix[1][0] =           (xy + zw);//
             _Matrix[1][1] = ((T)0.5 -  xx - zz);
             _Matrix[1][2] =           (yz - xw);
 
-            _Matrix[2][0] =           (xz - yw);
-            _Matrix[2][1] =           (yz + xw);
-            _Matrix[2][2] = ((T)0.5 -  xx - yy);
+            _Matrix[2][0] =           (xz - yw);//
+            _Matrix[2][1] =           (yz + xw);//
+            _Matrix[2][2] = ((T)0.5 -  xx - yy);//
 
             return _Matrix;
         }
 
-        static euler_t<T> EulerAngles(const rotMatrix_t<T>& _Rotation)
+        static vect_t<T> EulerAngles(const rotMatrix_t<T>& _Rotation)
         {
             return {
                 atan2f(_Rotation[2][1], _Rotation[2][2]), //Roll
@@ -236,7 +247,7 @@ namespace vmath
             };
         }
 
-        euler_t<T> EulerAngles(void) { return EulerAngles(RotationMatrix()); }
+        vect_t<T> EulerAngles(void) { return EulerAngles(RotationMatrix()); }
     };
 
     template <typename T = double>

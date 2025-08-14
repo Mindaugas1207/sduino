@@ -65,6 +65,12 @@ function updateValue(reqId, val) {
 //     xh.send(FD);
 // }
 
+
+
+function myTimer() {
+    getValue('ALL');
+}
+
 function initButtons() {
     var allButtons = document.querySelectorAll('.button');
 
@@ -84,6 +90,17 @@ function initRanges() {
 
         range.addEventListener('input', () => {
             setBubble(range, bubble);
+        });
+
+        range.addEventListener('onmouseup', () => {
+            updateValue(range.parentNode.id, range.value);
+        });
+
+        range.addEventListener('ontouchend', () => {
+            updateValue(range.parentNode.id, range.value);
+        });
+
+        range.addEventListener('onkeyup', () => {
             updateValue(range.parentNode.id, range.value);
         });
 
@@ -128,7 +145,8 @@ function onBodyLoad() {
     initTabs();
     initButtons();
     initRanges();
-    getValue('ALL');
+    
+    setInterval(myTimer, 1000);
     //getValue('CMDS')
     //setTimeout(loadCmds, 1000);
 }

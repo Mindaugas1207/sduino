@@ -5,16 +5,9 @@
 #ifndef _IS31FL3218_H
 #define _IS31FL3218_H
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-
 #include "port.h"
 
 #define IS31FL3218_ADDRESS 0x54
-
-// Registers
 
 #define IS31FL3218_CHANNEL_COUNT 18
 #define IS31FL3218_SHUTDOWN_REG 0x00
@@ -42,10 +35,13 @@ extern "C"
 #define IS31FL3218_UPDATE_REG 0x16
 #define IS31FL3218_RESET_REG 0x17
 
-//
-
 #define IS31FL3218_OK PORT_OK
 #define IS31FL3218_ERROR PORT_ERROR
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
 static const uint8_t IS31FL3218_GAMMA_32[] = {0, 1, 2, 4, 6, 10, 13, 18, 22, 28, 33, 39, 46, 53, 61, 69, 78, 86, 96, 106, 116, 126, 138, 149, 161, 173, 186, 199, 212, 226, 240, 255};
 static const uint8_t IS31FL3218_GAMMA_64[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 29, 32, 35, 38, 41, 44, 47, 50, 53, 57, 61, 65, 69, 73, 77, 81, 85, 89, 94, 99, 104, 109, 114, 119, 124, 129, 134, 140, 146, 152, 158, 164, 170, 176, 182, 188, 195, 202, 209, 216, 223, 230, 237, 244, 251, 255};
@@ -54,6 +50,7 @@ static const uint8_t IS31FL3218_GAMMA_64[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 12,
 #define IS31FL3218_GAMMA_32_STEP_MAX (sizeof(IS31FL3218_GAMMA_32) - 1)
 #define IS31FL3218_GAMMA_64_STEP_MAX (sizeof(IS31FL3218_GAMMA_64) - 1)
 #define IS31FL3218_PWM_MAX 255
+#define IS31FL3218_PWM_MIN 0
 
 struct __attribute__((__packed__)) IS31FL3218_data_s
 {

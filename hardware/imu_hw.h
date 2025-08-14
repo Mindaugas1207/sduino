@@ -17,12 +17,18 @@ extern "C"
 {
 #endif
 
+#ifdef IMU_USE_DOUBLE
+#define IMU_HW_FTYPE double
+#else
+#define IMU_HW_FTYPE float
+#endif
+
 typedef struct
 {
     struct bmi08x_dev BMI08X_Device;
     uint Pin;
-    double faccel;
-    double fgyro;
+    IMU_HW_FTYPE faccel;
+    IMU_HW_FTYPE fgyro;
 } imu_hw_inst_t;
 
 static bool bmi08x_hw_dataSync;
@@ -116,27 +122,30 @@ typedef struct
 {
     struct
     {
-        double X, Y, Z;
+        IMU_HW_FTYPE X, Y, Z;
     } Gyroscope;
 
     struct
     {
-        double X, Y, Z;
+        IMU_HW_FTYPE X, Y, Z;
     } Accelerometer;
 } imu_hw_data_t;
 
-#define G_EARTH (9.81492)
+#define IMU_HW_G_EARTH (IMU_HW_FTYPE)(9.81492)
+#define IMU_HW_M_PI (IMU_HW_FTYPE)(M_PI)
 
-#define BMI08X_ACCEL_FACT_3G (3 * G_EARTH / (1 << 15))
-#define BMI08X_ACCEL_FACT_6G (6 * G_EARTH / (1 << 15))
-#define BMI08X_ACCEL_FACT_12G (12 * G_EARTH / (1 << 15))
-#define BMI08X_ACCEL_FACT_24G (24 * G_EARTH / (1 << 15))
+#define BMI08X_TIME_KOEF (IMU_HW_FTYPE)(39.0625)
 
-#define BMI08X_GYRO_FACT_125 (125 * M_PI / (180 * (1 << 15)))
-#define BMI08X_GYRO_FACT_250 (250 * M_PI / (180 * (1 << 15)))
-#define BMI08X_GYRO_FACT_500 (500 * M_PI / (180 * (1 << 15)))
-#define BMI08X_GYRO_FACT_1000 (1000 * M_PI / (180 * (1 << 15)))
-#define BMI08X_GYRO_FACT_2000 (2000 * M_PI / (180 * (1 << 15)))
+#define BMI08X_ACCEL_FACT_3G (3 * IMU_HW_G_EARTH / (1 << 15))
+#define BMI08X_ACCEL_FACT_6G (6 * IMU_HW_G_EARTH / (1 << 15))
+#define BMI08X_ACCEL_FACT_12G (12 * IMU_HW_G_EARTH / (1 << 15))
+#define BMI08X_ACCEL_FACT_24G (24 * IMU_HW_G_EARTH / (1 << 15))
+
+#define BMI08X_GYRO_FACT_125 (125 * IMU_HW_M_PI / (180 * (1 << 15)))
+#define BMI08X_GYRO_FACT_250 (250 * IMU_HW_M_PI / (180 * (1 << 15)))
+#define BMI08X_GYRO_FACT_500 (500 * IMU_HW_M_PI / (180 * (1 << 15)))
+#define BMI08X_GYRO_FACT_1000 (1000 * IMU_HW_M_PI / (180 * (1 << 15)))
+#define BMI08X_GYRO_FACT_2000 (2000 * IMU_HW_M_PI / (180 * (1 << 15)))
 
 static int bmi08x_GetConversionFactors(imu_hw_inst_t *inst)
 {

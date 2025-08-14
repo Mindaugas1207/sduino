@@ -19,7 +19,7 @@ class Encoder
     int PPR;//7
     int Reduction;//4
     int Oersampling;//4
-    T WheelDiameter;//22.0f/1000
+    T WheelRadius;//22.0f/1000
 
     T WheelLength; //WheelDiameter * M_PI
     T Ratio;
@@ -27,14 +27,12 @@ class Encoder
     bool Enabled;
     uint64_t TimeStamp;
 
-    // T GetDeltaT(const uint64_t& time)
-    // {
-    //     T dT = (T)(time - TimeStamp) / 1000000;
-    //     TimeStamp = time;
-
-    //     return dT;
-    // }
-
+    int32_t StepsLast;
+    int64_t StepCount;
+    T RPM;
+    T W;
+    T V;
+    
 public:
     struct Config
     {
@@ -47,16 +45,25 @@ public:
         T WheelDiameter;//22.0f/1000
     };
 
-    int32_t StepsLast;
-    int32_t StepsDelta;
-    uint32_t CountsLast;
-    uint32_t CountsDelta;
-    T RPM;
-    T RPM_;
-    T RPS;
-    T RPS_;
-    T MPS;
-    T MPS_;
+    int64_t GetCount(void)
+    {
+        return StepCount;
+    }
+
+    T GetRPM(void)
+    {
+        return RPM;
+    }
+
+    T GetAngularVelocity(void)
+    {
+        return W;
+    }
+
+    T GetVelocity(void)
+    {
+        return V;
+    }
 
     int Init(const encoder_hw_inst_t& hw)
     {
@@ -74,6 +81,8 @@ public:
 
         LoadConfig(config);
 
+        StepCount = 0;
+
         return ENCODER_OK;
     }
 
@@ -89,57 +98,22 @@ public:
         return ENCODER_OK;
     }
 
-    // int Update(const uint64_t& time = TIME_U64())
-    // {
-    //     return Update(time, GetDeltaT(time));
-    // }
-
-    // std::tuple<float, float, float> XYoffsetEncoders(auto dR, auto dL, float A0)
-    // {
-    //     auto A = dR - dL;
-    //     auto E = (float)(ENCODER_BASE_LENGTH / 2.0) * (dR + dL);
-    //     auto B = E / A;
-    //     float AX, AY, C;
-    //     if (std::isinf(B) || std::isnan(B))
-    //     {
-    //         B = (float)(ENCODER_PULSE_TO_LENGTH / 2.0) * (dR + dL);
-    //         C = 0.0f;
-    //         AX = std::cos(A0);
-    //         AY = std::sin(A0);
-    //     }
-    //     else
-    //     {
-    //         C = (float)(ENCODER_PULSE_TO_LENGTH / ENCODER_BASE_LENGTH) * A;
-    //         AX =   std::sin(C + A0) - std::sin(A0);
-    //         AY = -(std::cos(C + A0) - std::cos(A0));
-    //     }
-        
-    //     return {B * AX, B * AY, C};
-    // }
-
     int Update(const uint64_t& time = TIME_U64())
     {
         if (Enabled)
         {
             auto dt = (time - TimeStamp);
-            if (dt > SamplingPeriod)
+            if (dt >= SamplingPeriod)
             {
-                auto steps = encoder_get_step_count(&Encoder_hw);
-                auto counts = encoder_get_pulse_count(&Encoder_hw);
+                int32_t steps = encoder_get_step_count(&Encoder_hw);
+                int32_t d = steps - StepsLast;
+                W = d * Ratio;
+                RPM = W * 30 / M_PI;
+                V = W * WheelRadius;
 
-                StepsDelta = steps - StepsLast;
-                CountsDelta = counts;
-
-                RPS  = StepsDelta  * Ratio;
-                RPS_ = CountsDelta * Ratio * 4;
-                RPM  = RPS  * 60;
-                RPM_ = RPS_ * 60;
-
-                MPS  = RPS * WheelLength;
-                MPS_ = RPS_ * WheelLength;
+                StepCount += d;
 
                 StepsLast = steps;
-                CountsLast = counts;
                 TimeStamp = time;
             }
         }
@@ -164,10 +138,10 @@ public:
         PPR = config.PPR;//7
         Reduction = config.Reduction;//4
         Oersampling = config.Oersampling;//4
-        WheelDiameter = config.WheelDiameter;//22.0f/1000
+        WheelRadius = config.WheelDiameter / 2;//22.0f/1000
 
-        Ratio = (SamplingPeriod / (T)(PPR * Oersampling * Reduction)) / 1000000;
-        WheelLength = WheelDiameter * M_PI;
+        Ratio = (SamplingPeriod / (T)(PPR * Oersampling * Reduction)) * M_PI * 2 / 1000000;
+        WheelLength = WheelRadius * 2 * M_PI;
     }
 
 	Config GetConfig(void)
@@ -179,7 +153,7 @@ public:
             .PPR = PPR,
             .Reduction = Reduction,
             .Oersampling = Oersampling,
-            .WheelDiameter = WheelDiameter
+            .WheelDiameter = WheelRadius * 2
         };
     }
 };

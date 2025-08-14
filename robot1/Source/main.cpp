@@ -4,6 +4,7 @@
 
 #include "main.hpp"
 #include "config.hpp"
+#include "MMC5603_hw.h"
 
 #define DRV_R 473.5f
 constexpr auto MOTOR_MIN_RPM = 260;
@@ -94,9 +95,8 @@ constexpr auto ENCODER_BASE_LENGTH = 0.184;
 #define LINE_SENSOR_LED_BLINK_FREQUENCY_CALIB 10
 #define LINE_SENSOR_CALIBRATION_TIME 3500
 #define LINE_SENSOR_TIMEOUT_TIME 500
-#define LINE_SENSOR_MAX_ANGLE_RAD 1.570796326794900f
-#define LINE_SENSOR_POS_TO_ANGLE_RAD 0.043505588000279f
-#define LINE_SENSOR_VALUE_TO_ANGLE_RAD 0.304539116001953f
+#define LINE_SENSOR_MAX_ANGLE_RAD 1.570796326794900
+#define LINE_SENSOR_POS_TO_ANGLE_RAD 0.043505588000279
 #define LINE_SENSOR_ANGLE_RAD_TO_POS (1 / LINE_SENSOR_POS_TO_ANGLE_RAD)
 #define LINE_SENSOR_ANGLE_RAD_TO_VALUE (1 / LINE_SENSOR_VALUE_TO_ANGLE_RAD)
 #define LINE_SENSOR_LAST_ANGLE_RAD (LINE_SENSOR_LAST_VALUE * LINE_SENSOR_VALUE_TO_ANGLE_RAD)
@@ -107,45 +107,17 @@ constexpr auto ENCODER_BASE_LENGTH = 0.184;
 uint64_t prtime;
 uint64_t pidtime;
 uint64_t plytatime;
-float Position;
-float LastPosition;
-float CenterIndex;
-float lastError;
-float imu_yaw;
-float last_yaw;
-float dyaw;
-int plyta_state = 0;
+double last_yaw;
 
-struct Point
-{
-    float Start;
-    float End;
-    color_t Color;
-
-    float Width();
-    float Center();
-};
-
-struct Line
-{
-    Point End;
-};
-
-void ControlUpdate(void);
+void ControlUpdate(const uint64_t& time);
 
 int main()
 {
 
     Init();
+    
+    
 
-    lastError = 0;
-    Position = 0;
-    LastPosition = 0;
-    imu_yaw = 0;
-    last_yaw = 0;
-    dyaw = 0;
-    CenterIndex = LineSensor0.SensorCount() / 2;
-    //Start();
     while (true)
     {
         uint64_t time = TIME_U64();
@@ -155,14 +127,13 @@ int main()
         MotorDriverB.Update(time);
         EncoderA.Update(time);
         EncoderB.Update(time);
-        //ESC0.Update(time);
+        ESC0.Update(time);
         IMU0.Update(time);
+        LineSensor0.SetDisplayAnalog(LFSYS.LINE_ANALOG);
         LineSensor0.Update(time);
         //DistanceSensor0.Update(time);
         
-        ControlUpdate();
-
-        LineSensor0.UpdateLeds(time);
+        ControlUpdate(time);
 
         Interface.Process();
     }
@@ -170,152 +141,85 @@ int main()
     return 0;
 }
 
-
-void ControlUpdate(void)
-{
-    uint64_t time = TIME_U64();
-
-    float dev = 0;
-    float AanalogPosition = 0;
-    bool detected = false;
-    int allDetected = true;
-    for (auto i = 0; i < LineSensor0.SensorCount(); i++)
-    {
-        detected = detected || LineSensor0[i].Color == BLACK;
-        allDetected = allDetected && LineSensor0[i].Color == BLACK;
-        float Svalue = LineSensor0[i].Color == BLACK ? 1.0f : 0.0f;
-        AanalogPosition += Svalue * (i + 1);
-        dev += Svalue;
-    }
-
-    auto orient = IMU0.GetOrientation();
-    float yaw = vmath::UnwrapAngle(imu_yaw, (float)orient.Yaw());
-    imu_yaw = yaw;
-
-    
-
-    if (detected && !allDetected)
-    {
-        if (dev != 0.0f)
-        {
-            Position = (CenterIndex - (AanalogPosition / dev) + 1.0f) / CenterIndex;
-            LastPosition = Position;
-        }
+// std::tuple<float, float, float> XYoffsetEncoders(auto dR, auto dL, float A0)
+//     {
+//         auto A = dR - dL;
+//         auto E = (float)(ENCODER_BASE_LENGTH / 2.0) * (dR + dL);
+//         auto B = E / A;
+//         float AX, AY, C;
+//         if (std::isinf(B) || std::isnan(B))
+//         {
+//             B = (float)(ENCODER_PULSE_TO_LENGTH / 2.0) * (dR + dL);
+//             C = 0.0f;
+//             AX = std::cos(A0);
+//             AY = std::sin(A0);
+//         }
+//         else
+//         {
+//             C = (float)(ENCODER_PULSE_TO_LENGTH / ENCODER_BASE_LENGTH) * A;
+//             AX =   std::sin(C + A0) - std::sin(A0);
+//             AY = -(std::cos(C + A0) - std::cos(A0));
+//         }
         
-        last_yaw = yaw;
-    }
-    else
-    {
-        dyaw = (yaw - last_yaw) * LINE_SENSOR_ANGLE_RAD_TO_VALUE;
+//         return {B * AX, B * AY, C};
+//     }
 
-        // if (LastPosition < (LINE_SENSOR_EDGE_VALUE - (LINE_SENSOR_STEP_VALUE * 3)) && LastPosition > -(LINE_SENSOR_EDGE_VALUE - (LINE_SENSOR_STEP_VALUE * 3)))
-        // {
-        //     Position = std::clamp(dyaw + LastPosition, -LINE_SENSOR_TURN90_VALUE, LINE_SENSOR_TURN90_VALUE);
-        // }
-        // else
-        // {
-            if (LastPosition > 0.0f)
-                Position = std::clamp(dyaw + LastPosition, LINE_SENSOR_EDGE_VALUE, LINE_SENSOR_TURN90_VALUE);
-            else
-                Position = std::clamp(dyaw + LastPosition, -LINE_SENSOR_TURN90_VALUE, -LINE_SENSOR_EDGE_VALUE);
-        // }
+void ControlUpdate(const uint64_t& time = TIME_U64())
+{
+    auto orient = IMU0.GetOrientation();
+    auto yaw = orient.Yaw();
+    float Position = 0;
+
+    auto VL = EncoderA.GetVelocity();
+    auto VR = EncoderB.GetVelocity();
+
+    double V = (VR + VL) / 2;
+    double W = (VR - VL) / ENCODER_BASE_LENGTH;
+
+    LFSYS.SpeedL = VL;
+    LFSYS.SpeedR = VR;
+    LFSYS.SpeedV = V;
+    LFSYS.SpeedW = W;
+
+    switch (LineSensor0.GetTurnDirection())
+    {
+    case TURN_LEFT:
+        Position = std::clamp(yaw - last_yaw - (M_PI / 2), -M_PI, M_PI);
+        break;
+    case TURN_RIGHT:
+        Position = std::clamp(yaw - last_yaw + (M_PI / 2), -M_PI, M_PI);
+        break;
+    case TURN_NONE: //Matom linija ir galim ja sekti, arba nematom linijos ir sekam paskutinia puse
+    default:
+        last_yaw = yaw;
+        Position = LineSensor0.LineCenter();
+        break;
     }
     
     if (time - pidtime > LFSYS.Config.loop_time)
     {
-        pidtime = time;
-        float pwrA, pwrB, err, pid, fspeed;
+        float dt = (float)(time - pidtime) / 1000000;
 
-        // if (LFSYS.Plyta_doing && LFSYS.Start)
-        // {
-        //     float angle = 0;
-        //     switch (plyta_state)
-        //     {
-        //     case 0:
-        //     angle = LFSYS.Config.Wall_Angle;
-        //     if (time - plytatime > LFSYS.Config.Wall_time1 * 1000)
-        //     {
-        //         plytatime = time;
-        //         plyta_state = 1;
-        //     }
-        //         break;
-        //     case 1:
-        //     angle = 0;
-        //     if (time - plytatime > LFSYS.Config.Wall_time2 * 1000)
-        //     {
-        //         plytatime = time;
-        //         plyta_state = 2;
-        //     }
-        //         break;
-        //     case 2:
-        //     angle = -LFSYS.Config.Wall_Angle;
-        //     if (detected)
-        //     {
-        //         LFSYS.Plyta_doing = false;
-        //         LFSYS.Plyta_done = true;
-        //     }
-        //         break;
-        //     default:
-        //         break;
-        //     }
-        //     //
-        //     dyaw = (yaw - last_yaw) * LINE_SENSOR_ANGLE_RAD_TO_VALUE;
-        //     Position = std::clamp(dyaw + angle, -LINE_SENSOR_TURN90_VALUE, LINE_SENSOR_TURN90_VALUE);
-        //     fspeed = LFSYS.Config.Wall_Speed;
-        // }
-        // else
-        // {
-        //     if (!LFSYS.Plyta_done && LFSYS.Start)
-        //     {
-        //         if (DistanceSensor0.GetDistance() < LFSYS.Config.Wall_Th)
-        //         {
-        //             plyta_state = 0;
-        //             LFSYS.Plyta_doing = true;
-        //             plytatime = time;
-        //         }
-        //     }
+        float fspeed = LFSYS.Config.M_Speed;
+        float maxSpeed = LFSYS.Config.Max_Speed;
+        float esc_speed = LFSYS.Config.ESC_Speed;
 
-            
+        float pid = PID_Main.Compute(0, Position, dt);
 
-            // if (orient.Pitch() < -0.3)
-            // {
-            //     fspeed = LFSYS.Config.Ramp_Speed;
-            // }
-            // else if (orient.Pitch() > 0.3)
-            // {
-            //     fspeed = LFSYS.Config.Ramp_SpeedDown;
-            // }
-            // else
-            // {
-                fspeed = LFSYS.Config.M_Speed;
-            // }
-        // }
-
-        
-
-        //LineSensor0.SetLpos(std::clamp((int)Position, 0, (int)LINE_SENSOR_NUM_SENSORS + 1));
-        
-        err = Position;
-        pid = LFSYS.Config.Kp * err + LFSYS.Config.Kd * (err - lastError);
-        lastError = err;
-
-        pwrA = fspeed - pid;
-        pwrB = fspeed + pid;
-
-        pwrA = std::clamp(pwrA, -LFSYS.Config.Max_Speed, LFSYS.Config.Max_Speed);
-        pwrB = std::clamp(pwrB, -LFSYS.Config.Max_Speed, LFSYS.Config.Max_Speed);
+        float pwrA = std::clamp(fspeed - pid, -maxSpeed, maxSpeed);
+        float pwrB = std::clamp(fspeed + pid, -maxSpeed, maxSpeed);
 
         if (LFSYS.Start && !LFSYS.Stop)
         {
-            MotorDriverA.SetPower(-pwrA);
-            MotorDriverB.SetPower(pwrB);
-            //ESC0.SetPower(LFSYS.Config.ESC_Speed);
+            MotorDriverA.SetPower(-PID_MotorA.Compute(pwrA * MOTOR_MAX_RPM, EncoderA.GetRPM(), dt));
+            MotorDriverB.SetPower(PID_MotorB.Compute(pwrB * MOTOR_MAX_RPM, EncoderB.GetRPM(), dt));
+            ESC0.SetPower(esc_speed);
         }
     }
 
     
 
-    // if (time - prtime > 500 * 1000) {
+    //if (time - prtime > 500 * 1000) {
     //     prtime = time;
     //     auto orient = IMU0.GetOrientation();
     //     printf("OR> R:% .2f, P:% .2f, Y:% .2f\n", orient.Roll(), orient.Pitch(), orient.Yaw());
@@ -348,12 +252,52 @@ void ControlUpdate(void)
     //     printf(buffer);
 
     //     //printf("DS> %d, P> %f, LP> %f, Y> %f, lY> %f, dY> %f\n", DistanceSensor0.GetDistance(), Position, LastPosition, imu_yaw, last_yaw, dyaw);
-    // }
+    //}
 }
+
+//X state matrix
+//P covariance matrix;
+//Q system noise;
+//F transition matrix;
+//H observation matrix;
+//y sensor signal (with noise);
+//R sensor variance;
+
+//[vx = vx + ax * dt,
+// vy = vy + ay * dt,
+// w ]
+
+//[vx,
+// vy,
+// w  ]
+
+//[ax,
+// ay,
+// w  ]
+
+// void Prediction()
+// {
+//     double X, P, Q, F;
+//     double FT; //transpose F
+//     X = F*X;
+//     P = F*P*FT + Q;
+// }
+
+// void Update()
+// {
+//     double X, P, y, R, H;
+//     double HT; //transpose H
+//     double inn = y - H*X;
+//     double S = H*P*HT + R;
+//     double K = P*HT / S;
+//     X = X + K*inn;
+//     P = P - K*H*P;
+// }
+
+
 
 void ESC_Start(void)
 {
-    ESC0.SetPower(LFSYS.Config.ESC_Speed);
     if (ESC0.Start() != ESC_OK) { printf("DBG:ESC0->Start error.\n"); }
     LED0.Set(100, 100);
 
@@ -362,7 +306,6 @@ void ESC_Start(void)
 
 void ESC_Stop(void)
 {
-    ESC0.SetPower(LFSYS.Config.ESC_Speed);
     if (ESC0.Stop() != ESC_OK) { printf("DBG:ESC0->Stop error.\n"); }
     LED0.Set(500, 500);
 
@@ -371,17 +314,12 @@ void ESC_Stop(void)
 
 void Start(void)
 {
+    Wakeup();
     uint64_t time = TIME_U64();
 
-    if (LED0.Start(time) != LED_OK) { printf("DBG:LED0->Start error.\n"); }
     if (MotorDriverA.Start(time) != MOTOR_DRIVER_OK) { printf("DBG:MotorDriverA->Start error.\n"); }
     if (MotorDriverB.Start(time) != MOTOR_DRIVER_OK) { printf("DBG:MotorDriverB->Start error.\n"); }
-    if (EncoderA.Start(time) != ENCODER_OK) { printf("DBG:EncoderA->Start error.\n"); }
-    if (EncoderB.Start(time) != ENCODER_OK) { printf("DBG:EncoderB->Start error.\n"); }
-    ESC0.SetPower(LFSYS.Config.ESC_Speed);
     if (ESC0.Start(time) != ESC_OK) { printf("DBG:ESC0->Start error.\n"); }
-    if (IMU0.Start(time) != IMU_OK) { printf("DBG:IMU0->Start error.\n"); }
-    if (LineSensor0.Start(time) != LINE_SENSOR_OK) { printf("DBG:LineSensor0->Start error.\n"); }
     //if (DistanceSensor0.Start(time) != DISTANCE_SENSOR_OK) { printf("DBG:DistanceSensor0->Start error.\n"); }
 
     LED0.Set(100, 100);
@@ -402,26 +340,19 @@ void Stop(void)
     LFSYS.Sleep = false;
     LFSYS.Start = false;
     LFSYS.Stop  = true;
-
-    LFSYS.Plyta_doing = false;
-    LFSYS.Plyta_done = false;
 }
 
 void Wakeup(void)
 {
     uint64_t time = TIME_U64();
 
-    if (LED0.Start(time) != LED_OK) { printf("DBG:LED0->Start error.\n"); }
-    // if (MotorDriverA.Start(time) != MOTOR_DRIVER_OK) { printf("DBG:MotorDriverA->Start error.\n"); }
-    // if (MotorDriverB.Start(time) != MOTOR_DRIVER_OK) { printf("DBG:MotorDriverB->Start error.\n"); }
     if (EncoderA.Start(time) != ENCODER_OK) { printf("DBG:EncoderA->Start error.\n"); }
     if (EncoderB.Start(time) != ENCODER_OK) { printf("DBG:EncoderB->Start error.\n"); }
-    // if (ESC0.Start(time) != ESC_OK) { printf("DBG:ESC0->Start error.\n"); }
     if (IMU0.Start(time) != IMU_OK) { printf("DBG:IMU0->Start error.\n"); }
     if (LineSensor0.Start(time) != LINE_SENSOR_OK) { printf("DBG:LineSensor0->Start error.\n"); }
     //if (DistanceSensor0.Start(time) != DISTANCE_SENSOR_OK) { printf("DBG:DistanceSensor0->Start error.\n"); }
 
-    LED0.Set(500, 500);
+    LED0.Set(100, 900);
 
     LFSYS.Sleep = false;
     LFSYS.Start = false;
@@ -430,17 +361,14 @@ void Wakeup(void)
 
 void Sleep(void)
 {
-    if (LED0.Stop() != LED_OK) { printf("DBG:LED0->Stop error.\n"); }
-    if (MotorDriverA.Stop() != MOTOR_DRIVER_OK) { printf("DBG:MotorDriverA->Stop error.\n"); }
-    if (MotorDriverB.Stop() != MOTOR_DRIVER_OK) { printf("DBG:MotorDriverB->Stop error.\n"); }
+    Stop();
     if (EncoderA.Stop() != ENCODER_OK) { printf("DBG:EncoderA->Stop error.\n"); }
     if (EncoderB.Stop() != ENCODER_OK) { printf("DBG:EncoderB->Stop error.\n"); }
-    if (ESC0.Stop() != ESC_OK) { printf("DBG:ESC0->Stop error.\n"); }
     if (IMU0.Stop() != IMU_OK) { printf("DBG:IMU0->Stop error.\n"); }
     if (LineSensor0.Stop() != LINE_SENSOR_OK) { printf("DBG:LineSensor0->Stop error.\n"); }
     //if (DistanceSensor0.Stop() != DISTANCE_SENSOR_OK) { printf("DBG:DistanceSensor0->Stop error.\n"); }
 
-    LED0.Set(false);
+    LED0.Set(100, 900);
 
     LFSYS.Sleep = true;
     LFSYS.Start = false;
@@ -553,22 +481,29 @@ void Init(void)
     if (status != LINE_SENSOR_OK) { canStart = false; printf("DBG:LineSensor0->Init error [%d].\n", status); }
     // status = DistanceSensor0.Init(HWConfig.DistanceSensor0, {});
     // if (status != DISTANCE_SENSOR_OK) { canStart = false; printf("DBG:DistanceSensor0->Init error [%d].\n", status); }
-
+    
 
     LFSYS.Start = false;
     LFSYS.Stop  = false;
-    LFSYS.Sleep = false;
+    LFSYS.Sleep = true;
+    LFSYS.ESC_Start = false;
+    LFSYS.LINE_ANALOG = false;
+
+    if (LED0.Start() != LED_OK) { printf("DBG:LED0->Start error.\n"); }
 
     if (!canStart)
     {
+        LED0.Set(100, 400);
         for (;;)
         {
             tight_loop_contents();
         }
     }
 
+    LED0.Set(100, 900);
+
     //DEBUG TESTS
-    // uint64_t time = TIME_U64();
+    //uint64_t time = TIME_U64();
     // uint64_t prtime = time;
     // //LED
     // LED0.Start(time);
@@ -576,11 +511,11 @@ void Init(void)
     // while(1) {
     //     LED0.Update();
     // }
-    // //MotorDrivers
+    //MotorDrivers
     // MotorDriverA.Start(time);
     // MotorDriverB.Start(time);
-    // MotorDriverA.SetPower(0.1f);
-    // MotorDriverB.SetPower(0.1f);
+    // MotorDriverA.SetPower(-0.2f);
+    // MotorDriverB.SetPower(0.2f);
     // while(1) {
     //     MotorDriverA.Update();
     //     MotorDriverB.Update();

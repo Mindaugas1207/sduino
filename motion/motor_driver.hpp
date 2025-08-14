@@ -88,6 +88,10 @@ public:
                 //printf("%d, %f, %d, %f, %f\n", pwm, Setpoint, max, Max, Min);
             }
         }
+        else
+        {
+            motor_driver_hw_set_pwm(&Driver_hw, 0U, 0U);
+        }
 
         return MOTOR_DRIVER_OK;
     }

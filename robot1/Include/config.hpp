@@ -16,14 +16,14 @@ inline const HardwareConfig HWConfig = {
         .address = PI4MSD5V9540B_DEFAULT_ADDRESS
     },
     .MotorDriverA = {
-        .PinA = SDUINO_INTERNAL_DRV_A_IN1_PIN,
-        .PinB = SDUINO_INTERNAL_DRV_A_IN2_PIN,
+        .PinA = SDUINO_INTERNAL_DRV_A_IN1_PIN,//SDUINO_INTERNAL_DRV_A_IN1_PIN /MOTOR_A_ENCODER_A_PIN
+        .PinB = SDUINO_INTERNAL_DRV_A_IN2_PIN,//SDUINO_INTERNAL_DRV_A_IN2_PIN /MOTOR_A_ENCODER_B_PIN
         .Frequency = 125000000,
         .Period = 0xFFFF
     },
     .MotorDriverB = {
-        .PinA = SDUINO_INTERNAL_DRV_B_IN1_PIN,
-        .PinB = SDUINO_INTERNAL_DRV_B_IN2_PIN,
+        .PinA = SDUINO_INTERNAL_DRV_B_IN1_PIN,//SDUINO_INTERNAL_DRV_B_IN1_PIN /MOTOR_B_ENCODER_A_PIN
+        .PinB = SDUINO_INTERNAL_DRV_B_IN2_PIN,//SDUINO_INTERNAL_DRV_B_IN2_PIN /MOTOR_B_ENCODER_B_PIN
         .Frequency = 125000000,
         .Period = 0xFFFF
     },
@@ -112,7 +112,7 @@ inline const LineFollowerConfig DefaultConfig = {
         .Max = 1
     },
     .EncoderA = {
-        .SamplingPeriod = 100 * 1000,
+        .SamplingPeriod = 10 * 1000,
         .RPM_min = 100,
         .RPM_max = 4000,
         .PPR = 7,
@@ -121,7 +121,7 @@ inline const LineFollowerConfig DefaultConfig = {
         .WheelDiameter = 22.0 / 1000,
     },
     .EncoderB = {
-        .SamplingPeriod = 100 * 1000,
+        .SamplingPeriod = 10 * 1000,
         .RPM_min = 100,
         .RPM_max = 4000,
         .PPR = 7,
@@ -142,6 +142,7 @@ inline const LineFollowerConfig DefaultConfig = {
         .Calibrated = false
     },
     .LineSensor0 = {
+        .LedMaxBrightness = 1.0,
         .CalibrationTime = 4 * 1000 * 1000,
         .Calibrated = false
     }
